@@ -14,6 +14,7 @@ export default function Lineups() {
   const [formation, setFormation] = useState('4-3-3');
   const [starting, setStarting] = useState([]);
   const [subs, setSubs] = useState([]);
+  const [teamId, setTeamId] = useState(null);
 
   const load = async () => {
     try {
@@ -22,7 +23,8 @@ export default function Lineups() {
       const m = matches.find((x) => x.is_active) || (activeMatchId ? matches.find((x) => x.id === activeMatchId) : null);
       if (!m) return;
       setMatch(m);
-      setPlayers(ps.filter((p) => p.team_id === m.home_team_id));
+      setPlayers(ps);
+      setTeamId(m.home_team_id);
     } catch (e) {}
   };
   useEffect(() => { load(); }, [activeMatchId]);
@@ -46,6 +48,9 @@ export default function Lineups() {
   };
 
   const home = match ? teams[match.home_team_id] : null;
+  const away = match ? teams[match.away_team_id] : null;
+  const selectedTeam = match ? teams[teamId] : null;
+  const teamPlayers = players.filter((p) => p.team_id === teamId);
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
@@ -66,8 +71,11 @@ export default function Lineups() {
         <>
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: home?.primary_color, color: home?.secondary_color }}>{home?.short_name?.slice(0,3)}</div>
-              <span className="text-white font-medium">{home?.name}</span>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: selectedTeam?.primary_color, color: selectedTeam?.secondary_color }}>{selectedTeam?.short_name?.slice(0,3)}</div>
+              <span className="text-white font-medium">{selectedTeam?.name}</span>
+            </div>
+            <div className="w-48">
+              <Select value={teamId} onChange={setTeamId} options={[home, away].filter(Boolean).map((t) => ({ id: t.id, name: `${t.name}${t.id === match.home_team_id ? ' (Home)' : ' (Away)'}` }))} />
             </div>
             <div className="w-40">
               <Select value={formation} onChange={setFormation} options={FORMATIONS.map((f) => ({ id: f, name: f }))} />
@@ -96,9 +104,9 @@ export default function Lineups() {
 
             {/* Player pool */}
             <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-5 max-h-[520px] overflow-y-auto">
-              <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2"><Users size={14} /> Squad ({players.length})</h3>
+              <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-2"><Users size={14} /> Squad ({teamPlayers.length})</h3>
               <div className="space-y-1.5">
-                {players.map((p) => {
+                {teamPlayers.map((p) => {
                   const inXI = starting.find((s) => s.id === p.id);
                   const inSubs = subs.find((s) => s.id === p.id);
                   return (
@@ -111,7 +119,7 @@ export default function Lineups() {
                     </div>
                   );
                 })}
-                {players.length === 0 && <div className="text-xs text-slate-500 text-center py-4">No players for this team.</div>}
+                {teamPlayers.length === 0 && <div className="text-xs text-slate-500 text-center py-4">No players for this team.</div>}
               </div>
               <div className="mt-4 pt-4 border-t border-white/5 text-xs text-slate-500">Starting XI: {starting.length}/11 · Subs: {subs.length}</div>
             </div>
