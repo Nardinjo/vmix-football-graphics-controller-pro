@@ -73,12 +73,15 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
   const [status, setStatus] = useState('Check');
   const [localMinute, setLocalMinute] = useState(minute ?? 0);
 
+  // Reset the form only when a NEW modal opens (by id) — never mid-edit due to
+  // the live clock tick (which changes `minute`) or parent re-renders.
   useEffect(() => {
     if (modal) {
       setSide(modal.side || 'home'); setScorerId(''); setAssistId(''); setGoalType('Normal'); setIsVar(false);
       setPlayerId(''); setReason(''); setOutId(''); setInId(''); setStatus('Check'); setLocalMinute(minute ?? 0);
     }
-  }, [modal, minute]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modal?.id]);
 
   if (!modal) return null;
 

@@ -299,32 +299,6 @@ export default function LiveMatch() {
     );
   }
 
-  const TeamBlock = ({ side }) => {
-    const team = side === 'home' ? home : away;
-    const ActionBtn = ({ type, icon: Icon, label }) => (
-      <button onClick={() => openAction(type, side)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-medium border border-white/10 w-full">
-        <Icon size={15} /> {label}
-      </button>
-    );
-    return (
-      <div className="rounded-2xl border p-4 flex flex-col gap-2" style={{ borderColor: (team?.primary_color || '#1e3a8a') + '55' }}>
-        <div className="flex items-center gap-3 mb-1">
-          {team?.logo_url ? <img src={team.logo_url} alt="" className="w-10 h-10 object-contain rounded" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: team?.primary_color || '#1e3a8a', color: team?.secondary_color || '#fff' }}>{team?.short_name?.slice(0, 3) || '—'}</div>}
-          <div className="min-w-0">
-            <div className="text-white font-semibold truncate">{team?.name || (side === 'home' ? 'Home' : 'Away')}</div>
-            <div className="text-[11px] text-slate-500">{getPlayers(side).length} players · Coach: {team?.coach || '—'}</div>
-          </div>
-        </div>
-        <ActionBtn type="goal" icon={Goal} label="Goal" />
-        <ActionBtn type="yellow" icon={Square} label="Yellow Card" />
-        <ActionBtn type="red" icon={Ban} label="Red Card" />
-        <ActionBtn type="sub" icon={Repeat} label="Substitution" />
-        <ActionBtn type="coach" icon={User} label="Coach" />
-        <ActionBtn type="lowerthird" icon={User} label="Player Lower Third" />
-      </div>
-    );
-  };
-
   return (
     <div className="max-w-[1800px] mx-auto space-y-4">
       {/* Status bar */}
@@ -379,11 +353,11 @@ export default function LiveMatch() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-slate-500 mb-2 px-1">Home Team</div>
-          <TeamBlock side="home" />
+          <TeamBlock side="home" team={home} playerCount={homePlayers.length} onAction={openAction} />
         </div>
         <div>
           <div className="text-xs uppercase tracking-widest text-slate-500 mb-2 px-1">Away Team</div>
-          <TeamBlock side="away" />
+          <TeamBlock side="away" team={away} playerCount={awayPlayers.length} onAction={openAction} />
         </div>
       </div>
 
@@ -409,7 +383,35 @@ export default function LiveMatch() {
 
       <MatchTimeline events={events} teams={teamsMap} onDelete={deleteEvent} />
 
-      {modal && <ActionModal modal={modal} home={home} away={away} getPlayers={getPlayers} minute={minute} onTake={onTake} onPreview={onPreview} onOut={onOut} onClose={() => setModal(null)} />}
+      {modal && <ActionModal key={modal.id} modal={modal} home={home} away={away} getPlayers={getPlayers} minute={minute} onTake={onTake} onPreview={onPreview} onOut={onOut} onClose={() => setModal(null)} />}
+    </div>
+  );
+}
+
+function TeamBlock({ side, team, playerCount, onAction }) {
+  // Defined at module scope so it keeps a stable identity across re-renders —
+  // without this, the whole team card remounts every clock tick and clicks/focus
+  // are lost.
+  const ActionBtn = ({ type, icon: Icon, label }) => (
+    <button onClick={() => onAction(type, side)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-medium border border-white/10 w-full">
+      <Icon size={15} /> {label}
+    </button>
+  );
+  return (
+    <div className="rounded-2xl border p-4 flex flex-col gap-2" style={{ borderColor: (team?.primary_color || '#1e3a8a') + '55' }}>
+      <div className="flex items-center gap-3 mb-1">
+        {team?.logo_url ? <img src={team.logo_url} alt="" className="w-10 h-10 object-contain rounded" /> : <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: team?.primary_color || '#1e3a8a', color: team?.secondary_color || '#fff' }}>{team?.short_name?.slice(0, 3) || '—'}</div>}
+        <div className="min-w-0">
+          <div className="text-white font-semibold truncate">{team?.name || (side === 'home' ? 'Home' : 'Away')}</div>
+          <div className="text-[11px] text-slate-500">{playerCount} players · Coach: {team?.coach || '—'}</div>
+        </div>
+      </div>
+      <ActionBtn type="goal" icon={Goal} label="Goal" />
+      <ActionBtn type="yellow" icon={Square} label="Yellow Card" />
+      <ActionBtn type="red" icon={Ban} label="Red Card" />
+      <ActionBtn type="sub" icon={Repeat} label="Substitution" />
+      <ActionBtn type="coach" icon={User} label="Coach" />
+      <ActionBtn type="lowerthird" icon={User} label="Player Lower Third" />
     </div>
   );
 }
