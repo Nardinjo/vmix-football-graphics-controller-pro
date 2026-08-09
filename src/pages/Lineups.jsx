@@ -13,9 +13,12 @@ export default function Lineups() {
   const [teams, setTeams] = useState({});
   const [players, setPlayers] = useState([]);
   const [formation, setFormation] = useState('4-3-3');
-  const [starting, setStarting] = useState([]);
-  const [subs, setSubs] = useState([]);
+  // Per-team lineup state so the team dropdown genuinely swaps rosters/XI.
+  const [lineups, setLineups] = useState({}); // { [teamId]: { starting: [], subs: [] } }
   const [teamId, setTeamId] = useState(null);
+  const current = lineups[teamId] || { starting: [], subs: [] };
+  const starting = current.starting;
+  const subs = current.subs;
 
   const load = async () => {
     try {
@@ -30,21 +33,29 @@ export default function Lineups() {
   };
   useEffect(() => { load(); }, [activeMatchId]);
 
+  const setTeamLineup = (updater) => setLineups((prev) => {
+    const cur = prev[teamId] || { starting: [], subs: [] };
+    return { ...prev, [teamId]: updater(cur) };
+  });
   const toggleStarting = (p) => {
-    if (starting.find((s) => s.id === p.id)) setStarting(starting.filter((s) => s.id !== p.id));
-    else if (starting.length < 11) setStarting([...starting, p]);
+    setTeamLineup((cur) => {
+      if (cur.starting.find((s) => s.id === p.id)) return { ...cur, starting: cur.starting.filter((s) => s.id !== p.id) };
+      if (cur.starting.length >= 11) return cur;
+      return { ...cur, starting: [...cur.starting, p] };
+    });
   };
   const toggleSub = (p) => {
-    if (subs.find((s) => s.id === p.id)) setSubs(subs.filter((s) => s.id !== p.id));
-    else setSubs([...subs, p]);
+    setTeamLineup((cur) => {
+      if (cur.subs.find((s) => s.id === p.id)) return { ...cur, subs: cur.subs.filter((s) => s.id !== p.id) };
+      return { ...cur, subs: [...cur.subs, p] };
+    });
   };
 
   const autoSort = () => {
-    const sorted = [...starting].sort((a, b) => {
+    setTeamLineup((cur) => ({ ...cur, starting: [...cur.starting].sort((a, b) => {
       const order = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
       return order[a.position] - order[b.position];
-    });
-    setStarting(sorted);
+    }) }));
     addLog('Lineup auto-sorted by position', 'success');
   };
 
