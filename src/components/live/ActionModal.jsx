@@ -1,13 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { X, Users, Square, Ban, Repeat, User, ShieldAlert, Eye, ArrowUp, ArrowDown, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Users, Square, Ban, Repeat, User, ShieldAlert, Eye, ArrowUp, ArrowDown, Check, Search } from 'lucide-react';
 
 const inputCls = 'w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500 transition-colors';
 const labelCls = 'block text-xs text-slate-400 mb-1.5';
 
-function option(p) { return { value: p.id, label: `${p.number != null ? '#' + p.number + ' ' : ''}${p.full_name || ''}` }; }
+// Tappable, searchable roster list. Replaces native <select> — selection is a
+// plain onClick that always persists in component state, regardless of re-renders.
+function PlayerPicker({ label, players, value, onChange, excludeId, allowEmpty }) {
+  const [q, setQ] = useState('');
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return players
+      .filter((p) => !excludeId || p.id !== excludeId)
+      .filter((p) => !term || `${p.full_name || ''}`.toLowerCase().includes(term) || `${p.number ?? ''}`.includes(term));
+  }, [players, q, excludeId]);
 
-// Module-scope so React keeps the same component identity across renders —
-// without this, the form remounts on every keystroke and inputs drop focus.
+  const current = players.find((p) => p.id === value);
+
+  return (
+    <div>
+      <label className={labelCls}>{label}{current && allowEmpty && <button type="button" onClick={() => onChange('')} className="text-blue-400 hover:text-blue-300 ml-2">clear</button>}</label>
+      <div className="relative mb-2">
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number…" className={inputCls + ' pl-9'} />
+      </div>
+      <div className="max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/20 divide-y divide-white/5">
+        {filtered.length === 0 && <div className="px-3 py-4 text-xs text-slate-500 text-center">No players. Add players for this team on the Players page.</div>}
+        {filtered.map((p) => {
+          const sel = value === p.id;
+          return (
+            <button key={p.id} type="button" onClick={() => onChange(p.id)} className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm ${sel ? 'bg-blue-600/30 text-white' : 'text-slate-200 hover:bg-white/5'}`}>
+              <span className="w-7 h-7 rounded bg-black/40 flex items-center justify-center text-xs font-bold">{p.number ?? '—'}</span>
+              <span className="flex-1 truncate">{p.full_name}</span>
+              <span className="text-[10px] text-slate-500">{p.position}</span>
+              {sel && <Check size={14} className="text-blue-400" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MinuteField({ value, onChange }) {
   return (
     <div>
@@ -50,7 +84,7 @@ function SideToggle({ home, away, side, onChange }) {
         const t = s === 'home' ? home : away;
         const active = side === s;
         return (
-          <button key={s} onClick={() => onChange(s)} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold border transition-all"
+          <button key={s} type="button" onClick={() => onChange(s)} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold border transition-all"
             style={active ? { background: t?.primary_color || '#1e3a8a', color: t?.secondary_color || '#fff', borderColor: 'transparent' } : { background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', borderColor: 'rgba(255,255,255,0.1)' }}>
             {s === 'home' ? 'HOME' : 'AWAY'} · {t?.short_name || '—'}
           </button>
@@ -73,8 +107,7 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
   const [status, setStatus] = useState('Check');
   const [localMinute, setLocalMinute] = useState(minute ?? 0);
 
-  // Reset the form only when a NEW modal opens (by id) — never mid-edit due to
-  // the live clock tick (which changes `minute`) or parent re-renders.
+  // Reset only when a NEW modal opens (by id) — never mid-edit.
   useEffect(() => {
     if (modal) {
       setSide(modal.side || 'home'); setScorerId(''); setAssistId(''); setGoalType('Normal'); setIsVar(false);
@@ -87,7 +120,6 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
 
   const team = side === 'home' ? home : away;
   const players = getPlayers(side);
-  const opts = players.map(option);
   const subtitle = `${team?.name || ''} · Minute ${localMinute}'`;
 
   return (
@@ -97,9 +129,11 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
           <Shell title="GOAL" icon={Users} subtitle={subtitle} onClose={onClose}>
             <SideToggle home={home} away={away} side={side} onChange={setSide} />
             <div className="grid grid-cols-2 gap-3">
-              <div><label className={labelCls}>Scorer</label><select value={scorerId} onChange={(e) => setScorerId(e.target.value)} className={inputCls}><option value="">— Select scorer —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
-              <div><label className={labelCls}>Assist</label><select value={assistId} onChange={(e) => setAssistId(e.target.value)} className={inputCls}><option value="">— none —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
-              <div><MinuteField value={localMinute} onChange={setLocalMinute} /></div>
+              <PlayerPicker label="Scorer" players={players} value={scorerId} onChange={setScorerId} />
+              <PlayerPicker label="Assist" players={players} value={assistId} onChange={setAssistId} excludeId={scorerId} allowEmpty />
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <MinuteField value={localMinute} onChange={setLocalMinute} />
               <div><label className={labelCls}>Type</label><select value={goalType} onChange={(e) => setGoalType(e.target.value)} className={inputCls}>{['Normal', 'Penalty', 'Own Goal'].map((g) => <option key={g}>{g}</option>)}</select></div>
             </div>
             <label className="flex items-center gap-2 mt-3 text-sm text-slate-300"><input type="checkbox" checked={isVar} onChange={(e) => setIsVar(e.target.checked)} className="accent-blue-500" /> VAR check required</label>
@@ -110,7 +144,7 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
         {modal.type === 'yellow' && (
           <Shell title="YELLOW CARD" icon={Square} subtitle={subtitle} onClose={onClose}>
             <SideToggle home={home} away={away} side={side} onChange={setSide} />
-            <div><label className={labelCls}>Player</label><select value={playerId} onChange={(e) => setPlayerId(e.target.value)} className={inputCls}><option value="">— Select player —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+            <PlayerPicker label="Player" players={players} value={playerId} onChange={setPlayerId} />
             <div className="mt-3"><MinuteField value={localMinute} onChange={setLocalMinute} /></div>
             <TakeBtn onClick={() => onTake({ type: 'yellow', side, playerId, minute: localMinute })} disabled={!playerId} />
           </Shell>
@@ -119,9 +153,9 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
         {modal.type === 'red' && (
           <Shell title="RED CARD" icon={Ban} subtitle={subtitle} onClose={onClose}>
             <SideToggle home={home} away={away} side={side} onChange={setSide} />
-            <div><label className={labelCls}>Player</label><select value={playerId} onChange={(e) => setPlayerId(e.target.value)} className={inputCls}><option value="">— Select player —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+            <PlayerPicker label="Player" players={players} value={playerId} onChange={setPlayerId} />
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <div><label className={labelCls}>Reason</label><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Second yellow / Violent conduct / DOGSO…" className={inputCls} /></div>
+              <div><label className={labelCls}>Reason</label><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Second yellow / Violent / DOGSO…" className={inputCls} /></div>
               <MinuteField value={localMinute} onChange={setLocalMinute} />
             </div>
             <TakeBtn onClick={() => onTake({ type: 'red', side, playerId, minute: localMinute, reason })} disabled={!playerId} />
@@ -132,16 +166,10 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
           <Shell title="SUBSTITUTION" icon={Repeat} subtitle={subtitle} onClose={onClose}>
             <SideToggle home={home} away={away} side={side} onChange={setSide} />
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls + ' flex items-center gap-1'}><ArrowDown size={12} className="text-red-400" /> OUT</label>
-                <select value={outId} onChange={(e) => setOutId(e.target.value)} className={inputCls}><option value="">— player out —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-              </div>
-              <div>
-                <label className={labelCls + ' flex items-center gap-1'}><ArrowUp size={12} className="text-green-400" /> IN</label>
-                <select value={inId} onChange={(e) => setInId(e.target.value)} className={inputCls}><option value="">— player in —</option>{opts.filter((o) => o.value !== outId).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
-              </div>
-              <div className="col-span-2"><MinuteField value={localMinute} onChange={setLocalMinute} /></div>
+              <PlayerPicker label="OUT" players={players} value={outId} onChange={setOutId} />
+              <PlayerPicker label="IN" players={players} value={inId} onChange={setInId} excludeId={outId} />
             </div>
+            <div className="mt-3"><MinuteField value={localMinute} onChange={setLocalMinute} /></div>
             <TakeBtn onClick={() => onTake({ type: 'sub', side, outId, inId, minute: localMinute })} disabled={!outId || !inId} />
           </Shell>
         )}
@@ -149,7 +177,7 @@ export default function ActionModal({ modal, home, away, getPlayers, minute, onT
         {modal.type === 'lowerthird' && (
           <Shell title="PLAYER LOWER THIRD" icon={User} subtitle={subtitle} onClose={onClose}>
             <SideToggle home={home} away={away} side={side} onChange={setSide} />
-            <div><label className={labelCls}>Player</label><select value={playerId} onChange={(e) => setPlayerId(e.target.value)} className={inputCls}><option value="">— Select player —</option>{opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+            <PlayerPicker label="Player" players={players} value={playerId} onChange={setPlayerId} />
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button onClick={() => onPreview({ type: 'lowerthird', side, playerId })} disabled={!playerId} className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-medium disabled:opacity-40"><Eye size={15} /> Preview</button>
               <button onClick={() => onTake({ type: 'lowerthird', side, playerId })} disabled={!playerId} className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-bold disabled:opacity-40"><Check size={15} /> Take</button>

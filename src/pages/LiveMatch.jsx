@@ -388,15 +388,15 @@ export default function LiveMatch() {
   );
 }
 
-function TeamBlock({ side, team, playerCount, onAction }) {
-  // Defined at module scope so it keeps a stable identity across re-renders —
-  // without this, the whole team card remounts every clock tick and clicks/focus
-  // are lost.
-  const ActionBtn = ({ type, icon: Icon, label }) => (
+function ActionBtn({ type, side, icon: Icon, label, onAction }) {
+  return (
     <button onClick={() => onAction(type, side)} className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-medium border border-white/10 w-full">
       <Icon size={15} /> {label}
     </button>
   );
+}
+
+function TeamBlock({ side, team, playerCount, onAction }) {
   return (
     <div className="rounded-2xl border p-4 flex flex-col gap-2" style={{ borderColor: (team?.primary_color || '#1e3a8a') + '55' }}>
       <div className="flex items-center gap-3 mb-1">
@@ -406,12 +406,12 @@ function TeamBlock({ side, team, playerCount, onAction }) {
           <div className="text-[11px] text-slate-500">{playerCount} players · Coach: {team?.coach || '—'}</div>
         </div>
       </div>
-      <ActionBtn type="goal" icon={Goal} label="Goal" />
-      <ActionBtn type="yellow" icon={Square} label="Yellow Card" />
-      <ActionBtn type="red" icon={Ban} label="Red Card" />
-      <ActionBtn type="sub" icon={Repeat} label="Substitution" />
-      <ActionBtn type="coach" icon={User} label="Coach" />
-      <ActionBtn type="lowerthird" icon={User} label="Player Lower Third" />
+      <ActionBtn type="goal" side={side} icon={Goal} label="Goal" onAction={onAction} />
+      <ActionBtn type="yellow" side={side} icon={Square} label="Yellow Card" onAction={onAction} />
+      <ActionBtn type="red" side={side} icon={Ban} label="Red Card" onAction={onAction} />
+      <ActionBtn type="sub" side={side} icon={Repeat} label="Substitution" onAction={onAction} />
+      <ActionBtn type="coach" side={side} icon={User} label="Coach" onAction={onAction} />
+      <ActionBtn type="lowerthird" side={side} icon={User} label="Player Lower Third" onAction={onAction} />
     </div>
   );
 }
