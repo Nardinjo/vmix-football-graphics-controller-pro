@@ -16,14 +16,19 @@ function openDB() {
       const db = req.result;
       STORES.forEach((s) => { if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' }); });
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      // The connection can be closed by the browser (eviction) or a version
+      // change from another tab. Drop the cached promise so the next call
+      // reopens — otherwise db.transaction() throws "connection is closing".
+      db.onclose = () => { dbPromise = null; };
+      db.onversionchange = () => { db.close(); dbPromise = null; };
+      resolve(db);
+    };
+    req.onerror = () => { dbPromise = null; reject(req.error); };
+    req.onblocked = () => { dbPromise = null; reject(new Error('IndexedDB upgrade blocked by another tab')); };
   });
   return dbPromise;
-}
-
-function store(name, mode) {
-  return openDB().then((db) => db.transaction(name, mode).objectStore(name));
 }
 
 function reqify(request) {
@@ -33,22 +38,47 @@ function reqify(request) {
   });
 }
 
+// Acquire an object store, retrying once if the cached connection is dead
+// (InvalidStateError: "The database connection is closing").
+async function openStore(name, mode) {
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const db = await openDB();
+      if (!db.objectStoreNames.contains(name)) { dbPromise = null; continue; }
+      return db.transaction(name, mode).objectStore(name);
+    } catch (e) {
+      lastErr = e;
+      dbPromise = null;
+    }
+  }
+  throw lastErr;
+}
+
 export const localDb = {
-  async getAll(name) { const os = await store(name, 'readonly'); return reqify(os.getAll()).then((r) => r || []); },
-  async get(name, id) { const os = await store(name, 'readonly'); return reqify(os.get(id)).then((r) => r || null); },
-  async put(name, val) { const os = await store(name, 'readwrite'); await reqify(os.put(val)); return val; },
+  async getAll(name) { const os = await openStore(name, 'readonly'); return reqify(os.getAll()).then((r) => r || []); },
+  async get(name, id) { const os = await openStore(name, 'readonly'); return reqify(os.get(id)).then((r) => r || null); },
+  async put(name, val) { const os = await openStore(name, 'readwrite'); await reqify(os.put(val)); return val; },
   async putAll(name, vals) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const t = db.transaction(name, 'readwrite');
-      const os = t.objectStore(name);
-      vals.forEach((v) => os.put(v));
-      t.oncomplete = () => resolve(vals);
-      t.onerror = () => reject(t.error);
-    });
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const db = await openDB();
+        if (!db.objectStoreNames.contains(name)) { dbPromise = null; continue; }
+        return await new Promise((resolve, reject) => {
+          const t = db.transaction(name, 'readwrite');
+          const os = t.objectStore(name);
+          vals.forEach((v) => os.put(v));
+          t.oncomplete = () => resolve(vals);
+          t.onerror = () => reject(t.error);
+          t.onabort = () => reject(t.error);
+        });
+      } catch (e) { lastErr = e; dbPromise = null; }
+    }
+    throw lastErr;
   },
-  async del(name, id) { const os = await store(name, 'readwrite'); return reqify(os.delete(id)); },
-  async clear(name) { const os = await store(name, 'readwrite'); return reqify(os.clear()); },
-  async count(name) { const os = await store(name, 'readonly'); return reqify(os.count()).then((r) => r || 0); },
+  async del(name, id) { const os = await openStore(name, 'readwrite'); return reqify(os.delete(id)); },
+  async clear(name) { const os = await openStore(name, 'readwrite'); return reqify(os.clear()); },
+  async count(name) { const os = await openStore(name, 'readonly'); return reqify(os.count()).then((r) => r || 0); },
   STORES,
 };
