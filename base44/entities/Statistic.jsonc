@@ -1,0 +1,63 @@
+{
+  "name": "Statistic",
+  "type": "object",
+  "properties": {
+    "match_id": {
+      "type": "string",
+      "title": "Match ID"
+    },
+    "team_id": {
+      "type": "string",
+      "title": "Team ID"
+    },
+    "possession": {
+      "type": "number",
+      "title": "Possession %",
+      "default": 50
+    },
+    "shots": {
+      "type": "number",
+      "title": "Shots",
+      "default": 0
+    },
+    "shots_on_target": {
+      "type": "number",
+      "title": "Shots On Target",
+      "default": 0
+    },
+    "corners": {
+      "type": "number",
+      "title": "Corners",
+      "default": 0
+    },
+    "fouls": {
+      "type": "number",
+      "title": "Fouls",
+      "default": 0
+    },
+    "yellow_cards": {
+      "type": "number",
+      "title": "Yellow Cards",
+      "default": 0
+    },
+    "red_cards": {
+      "type": "number",
+      "title": "Red Cards",
+      "default": 0
+    },
+    "pass_accuracy": {
+      "type": "number",
+      "title": "Pass Accuracy %",
+      "default": 0
+    },
+    "expected_goals": {
+      "type": "number",
+      "title": "Expected Goals (xG)",
+      "default": 0
+    }
+  },
+  "required": [
+    "match_id",
+    "team_id"
+  ]
+}

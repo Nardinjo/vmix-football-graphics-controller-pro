@@ -1,0 +1,88 @@
+{
+  "name": "Match",
+  "type": "object",
+  "properties": {
+    "home_team_id": {
+      "type": "string",
+      "title": "Home Team"
+    },
+    "away_team_id": {
+      "type": "string",
+      "title": "Away Team"
+    },
+    "competition": {
+      "type": "string",
+      "title": "Competition"
+    },
+    "venue": {
+      "type": "string",
+      "title": "Venue"
+    },
+    "kickoff_time": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Kickoff Time"
+    },
+    "match_id": {
+      "type": "string",
+      "title": "Match ID"
+    },
+    "referee": {
+      "type": "string",
+      "title": "Referee"
+    },
+    "weather": {
+      "type": "string",
+      "title": "Weather"
+    },
+    "temperature": {
+      "type": "string",
+      "title": "Temperature"
+    },
+    "attendance": {
+      "type": "number",
+      "title": "Attendance"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "scheduled",
+        "live",
+        "halftime",
+        "finished"
+      ],
+      "default": "scheduled"
+    },
+    "home_score": {
+      "type": "number",
+      "title": "Home Score",
+      "default": 0
+    },
+    "away_score": {
+      "type": "number",
+      "title": "Away Score",
+      "default": 0
+    },
+    "current_half": {
+      "type": "number",
+      "title": "Current Half",
+      "default": 1
+    },
+    "current_minute": {
+      "type": "number",
+      "title": "Current Minute",
+      "default": 0
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "Active Match",
+      "default": false
+    }
+  },
+  "required": [
+    "home_team_id",
+    "away_team_id",
+    "competition"
+  ]
+}

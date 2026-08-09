@@ -1,0 +1,48 @@
+{
+  "name": "Team",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Team Name"
+    },
+    "short_name": {
+      "type": "string",
+      "title": "Short Name"
+    },
+    "country": {
+      "type": "string",
+      "title": "Country"
+    },
+    "league": {
+      "type": "string",
+      "title": "League"
+    },
+    "logo_url": {
+      "type": "string",
+      "title": "Logo URL (PNG)"
+    },
+    "primary_color": {
+      "type": "string",
+      "title": "Primary Color",
+      "default": "#1e3a8a"
+    },
+    "secondary_color": {
+      "type": "string",
+      "title": "Secondary Color",
+      "default": "#ffffff"
+    },
+    "coach": {
+      "type": "string",
+      "title": "Coach"
+    },
+    "captain": {
+      "type": "string",
+      "title": "Captain"
+    }
+  },
+  "required": [
+    "name",
+    "short_name"
+  ]
+}

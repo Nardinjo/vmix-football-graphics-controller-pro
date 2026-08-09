@@ -1,0 +1,57 @@
+{
+  "name": "MatchEvent",
+  "type": "object",
+  "properties": {
+    "match_id": {
+      "type": "string",
+      "title": "Match ID"
+    },
+    "type": {
+      "type": "string",
+      "title": "Event Type",
+      "enum": [
+        "goal",
+        "yellow_card",
+        "second_yellow",
+        "red_card",
+        "substitution",
+        "var",
+        "penalty",
+        "corner",
+        "offside",
+        "injury",
+        "own_goal",
+        "assist"
+      ]
+    },
+    "team_id": {
+      "type": "string",
+      "title": "Team ID"
+    },
+    "player_id": {
+      "type": "string",
+      "title": "Player ID"
+    },
+    "player_name": {
+      "type": "string",
+      "title": "Player Name"
+    },
+    "minute": {
+      "type": "number",
+      "title": "Minute"
+    },
+    "reason": {
+      "type": "string",
+      "title": "Reason"
+    },
+    "extra_data": {
+      "type": "string",
+      "title": "Extra Data"
+    }
+  },
+  "required": [
+    "match_id",
+    "type",
+    "minute"
+  ]
+}

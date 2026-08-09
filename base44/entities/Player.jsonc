@@ -1,0 +1,76 @@
+{
+  "name": "Player",
+  "type": "object",
+  "properties": {
+    "number": {
+      "type": "number",
+      "title": "Player Number"
+    },
+    "full_name": {
+      "type": "string",
+      "title": "Full Name"
+    },
+    "short_name": {
+      "type": "string",
+      "title": "Short Name"
+    },
+    "position": {
+      "type": "string",
+      "title": "Position",
+      "enum": [
+        "GK",
+        "DEF",
+        "MID",
+        "FWD"
+      ]
+    },
+    "age": {
+      "type": "number",
+      "title": "Age"
+    },
+    "nationality": {
+      "type": "string",
+      "title": "Nationality"
+    },
+    "height": {
+      "type": "string",
+      "title": "Height"
+    },
+    "weight": {
+      "type": "string",
+      "title": "Weight"
+    },
+    "photo_url": {
+      "type": "string",
+      "title": "Photo URL"
+    },
+    "team_id": {
+      "type": "string",
+      "title": "Team ID"
+    },
+    "is_captain": {
+      "type": "boolean",
+      "title": "Captain",
+      "default": false
+    },
+    "is_vice_captain": {
+      "type": "boolean",
+      "title": "Vice Captain",
+      "default": false
+    },
+    "preferred_foot": {
+      "type": "string",
+      "title": "Preferred Foot",
+      "enum": [
+        "Left",
+        "Right",
+        "Both"
+      ],
+      "default": "Right"
+    }
+  },
+  "required": [
+    "full_name",
+    "team_id"
+  ]
+}

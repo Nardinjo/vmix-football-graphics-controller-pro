@@ -1,11 +1,24 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import BroadcastLayout from '@/components/BroadcastLayout';
+import { VmixProvider } from '@/lib/vmixContext';
+import Dashboard from '@/pages/Dashboard';
+import Matches from '@/pages/Matches';
+import Teams from '@/pages/Teams';
+import Players from '@/pages/Players';
+import Lineups from '@/pages/Lineups';
+import Graphics from '@/pages/Graphics';
+import Scoreboard from '@/pages/Scoreboard';
+import Statistics from '@/pages/Statistics';
+import Settings from '@/pages/Settings';
+import Logs from '@/pages/Logs';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -34,7 +47,20 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={<VmixProvider><BroadcastLayout /></VmixProvider>}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/matches" element={<Matches />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/players" element={<Players />} />
+          <Route path="/lineups" element={<Lineups />} />
+          <Route path="/graphics" element={<Graphics />} />
+          <Route path="/scoreboard" element={<Scoreboard />} />
+          <Route path="/statistics" element={<Statistics />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/logs" element={<Logs />} />
+        </Route>
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
