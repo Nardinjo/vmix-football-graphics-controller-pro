@@ -149,10 +149,10 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { [field]: ns, current_minute: p.minute, current_half: half });
-      await recordEvent({ type: p.goalType === 'Own Goal' ? 'own_goal' : 'goal', team_id: team?.id, player_id: scorer?.id, player_name: scorer?.full_name, minute: p.minute, reason: p.goalType, extra_data: assist ? `Assist: ${assist.full_name}` : '' });
-      if (p.isVar) await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, reason: 'Goal confirmed' });
+      await recordEvent({ type: p.goalType === 'Own Goal' ? 'own_goal' : 'goal', team_id: team?.id, player_id: scorer?.id, player_name: scorer?.full_name, minute: p.minute, added_time: p.added || 0, reason: p.goalType, extra_data: assist ? `Assist: ${assist.full_name}` : '' });
+      if (p.isVar) await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, added_time: p.added || 0, reason: 'Goal confirmed' });
       bumpStat(team?.id, 'shots_on_target', 1);
-      sendGraphicData('Goal', { PLAYER_NAME: scorer?.full_name || '', PLAYER_NUMBER: scorer?.number ?? '', TEAM_NAME: team?.name || '', TEAM_SHORT: team?.short_name || '', MINUTE: p.minute, ASSIST: assist?.full_name || '', GOAL_TYPE: p.goalType });
+      sendGraphicData('Goal', { PLAYER_NAME: scorer?.full_name || '', PLAYER_NUMBER: scorer?.number ?? '', TEAM_NAME: team?.name || '', TEAM_SHORT: team?.short_name || '', MINUTE: `${p.minute ?? 0}${p.added ? '+' + p.added : ''}`, ASSIST: assist?.full_name || '', GOAL_TYPE: p.goalType });
       takeGraphic('Goal');
       addLog(`GOAL · ${p.side.toUpperCase()} · ${scorer?.full_name} (${p.minute}')`, 'success');
     } catch (e) { addLog('Goal save failed', 'warning'); }
@@ -164,9 +164,9 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await recordEvent({ type: 'yellow_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute });
+      await recordEvent({ type: 'yellow_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute, added_time: p.added || 0 });
       bumpStat(team?.id, 'yellow_cards', 1);
-      sendGraphicData('Yellow Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute });
+      sendGraphicData('Yellow Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: `${p.minute ?? 0}${p.added ? '+' + p.added : ''}` });
       takeGraphic('Yellow Card');
       addLog(`YELLOW · ${p.side.toUpperCase()} · ${pl?.full_name} (${p.minute}')`, 'warning');
     } catch (e) { addLog('Yellow card save failed', 'warning'); }
@@ -178,9 +178,9 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await recordEvent({ type: 'red_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute, reason: p.reason });
+      await recordEvent({ type: 'red_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute, added_time: p.added || 0, reason: p.reason });
       bumpStat(team?.id, 'red_cards', 1);
-      sendGraphicData('Red Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute, REASON: p.reason || '' });
+      sendGraphicData('Red Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: `${p.minute ?? 0}${p.added ? '+' + p.added : ''}`, REASON: p.reason || '' });
       takeGraphic('Red Card');
       addLog(`RED · ${p.side.toUpperCase()} · ${pl?.full_name} (${p.minute}')`, 'warning');
     } catch (e) { addLog('Red card save failed', 'warning'); }
@@ -193,8 +193,8 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await recordEvent({ type: 'substitution', team_id: team?.id, minute: p.minute, player_name: `${out?.full_name} ➡ ${inn?.full_name}`, extra_data: `#${out?.number ?? ''} OUT /#${inn?.number ?? ''} IN` });
-      sendGraphicData('Substitution', { PLAYER_OUT_NAME: out?.full_name || '', PLAYER_OUT_NUMBER: out?.number ?? '', PLAYER_IN_NAME: inn?.full_name || '', PLAYER_IN_NUMBER: inn?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute });
+      await recordEvent({ type: 'substitution', team_id: team?.id, minute: p.minute, added_time: p.added || 0, player_name: `${out?.full_name} ➡ ${inn?.full_name}`, extra_data: `#${out?.number ?? ''} OUT /#${inn?.number ?? ''} IN` });
+      sendGraphicData('Substitution', { PLAYER_OUT_NAME: out?.full_name || '', PLAYER_OUT_NUMBER: out?.number ?? '', PLAYER_IN_NAME: inn?.full_name || '', PLAYER_IN_NUMBER: inn?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: `${p.minute ?? 0}${p.added ? '+' + p.added : ''}` });
       takeGraphic('Substitution');
       addLog(`SUB · ${p.side.toUpperCase()} · #${out?.number} ➡ #${inn?.number} (${p.minute}')`, 'success');
     } catch (e) { addLog('Substitution save failed', 'warning'); }
@@ -226,8 +226,8 @@ export default function LiveMatch() {
     const team = teamOf(p.side);
     setModal(null);
     try {
-      await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, reason: `${p.status}${p.reason ? ' — ' + p.reason : ''}` });
-      sendGraphicData('VAR', { VAR_STATUS: p.status || '', REASON: p.reason || '', MINUTE: p.minute, TEAM_NAME: team?.name || '' });
+      await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, added_time: p.added || 0, reason: `${p.status}${p.reason ? ' — ' + p.reason : ''}` });
+      sendGraphicData('VAR', { VAR_STATUS: p.status || '', REASON: p.reason || '', MINUTE: `${p.minute ?? 0}${p.added ? '+' + p.added : ''}`, TEAM_NAME: team?.name || '' });
       takeGraphic('VAR');
       addLog(`VAR · ${p.status} · ${p.side.toUpperCase()} (${p.minute}')`, 'warning');
     } catch (e) { addLog('VAR save failed', 'warning'); }

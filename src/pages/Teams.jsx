@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, Users, Flag, User } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageHeader, Field, Input } from '@/pages/Matches';
 
 const EMPTY = { name: '', short_name: '', country: '', league: '', logo_url: '', primary_color: '#1e3a8a', secondary_color: '#ffffff', coach: '', captain: '' };
@@ -11,6 +12,7 @@ export default function Teams() {
   const [teams, setTeams] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState(null);
 
   const load = async () => { setLoading(true); try { setTeams(await localEntities.Team.list()); } catch (e) {} setLoading(false); };
   useEffect(() => { load(); }, []);
@@ -21,10 +23,30 @@ export default function Teams() {
     else { const c = await localEntities.Team.create(editing); addLog(`Team created: ${editing.name}`, 'success'); setTeams((p) => [c, ...p]); setEditing(null); return; }
     await load(); setEditing(null);
   };
-  const remove = async (t) => { await localEntities.Team.delete(t.id); addLog(`Team deleted: ${t.name}`, 'warning'); setTeams((p) => p.filter((x) => x.id !== t.id)); };
+  const remove = async (t) => {
+    let count = 0;
+    try { const ps = await localEntities.Player.filter({ team_id: t.id }); count = ps.length; } catch (e) {}
+    setConfirm({
+      title: `Delete team "${t.name}"?`,
+      message: count
+        ? `This team has ${count} linked player(s). They will remain in the database with a stale team link — reassign or delete them afterwards.`
+        : 'This action cannot be undone.',
+      details: count ? `Linked players: ${count}` : null,
+      confirmLabel: count ? 'Delete anyway' : 'Delete',
+      onConfirm: async () => {
+        try {
+          await localEntities.Team.delete(t.id);
+          addLog(`Team deleted: ${t.name}${count ? ` (${count} orphaned players)` : ''}`, 'warning');
+          setTeams((p) => p.filter((x) => x.id !== t.id));
+        } catch (e) { addLog('Failed to delete team', 'warning'); }
+        setConfirm(null);
+      }
+    });
+  };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
+      {confirm && <ConfirmDialog title={confirm.title} message={confirm.message} details={confirm.details} confirmLabel={confirm.confirmLabel} onCancel={() => setConfirm(null)} onConfirm={confirm.onConfirm} />}
       <PageHeader title="Team Management" subtitle="Manage clubs, colors, coaches and captains" onAdd={() => setEditing({ ...EMPTY })} addLabel="New Team" />
 
       {editing && (

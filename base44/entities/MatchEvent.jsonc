@@ -40,6 +40,11 @@
       "type": "number",
       "title": "Minute"
     },
+    "added_time": {
+      "type": "number",
+      "title": "Added Time",
+      "default": 0
+    },
     "reason": {
       "type": "string",
       "title": "Reason"

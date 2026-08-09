@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Copy, Trash2, Upload, X, Trophy, MapPin, User, Cloud, Thermometer } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const EMPTY = { home_team_id: '', away_team_id: '', competition: '', venue: '', kickoff_time: '', match_id: '', referee: '', weather: '', temperature: '', attendance: 0, status: 'scheduled', home_score: 0, away_score: 0, current_half: 1, current_minute: 0, is_active: false };
 
@@ -11,6 +12,7 @@ export default function Matches() {
   const [teams, setTeams] = useState({});
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -46,8 +48,27 @@ export default function Matches() {
   };
 
   const remove = async (m) => {
-    await localEntities.Match.delete(m.id);
-    addLog('Match deleted', 'warning'); setMatches((p) => p.filter((x) => x.id !== m.id));
+    let events = 0, stats = 0;
+    try {
+      const [evs, sts] = await Promise.all([localEntities.MatchEvent.filter({ match_id: m.id }), localEntities.Statistic.filter({ match_id: m.id })]);
+      events = evs.length; stats = sts.length;
+    } catch (e) {}
+    setConfirm({
+      title: 'Delete this match?',
+      message: (events || stats)
+        ? `${events} event(s) and ${stats} statistic row(s) are linked to this match and will remain as orphan records.`
+        : 'This action cannot be undone.',
+      details: (events || stats) ? `Events: ${events}\nStatistics: ${stats}` : null,
+      confirmLabel: (events || stats) ? 'Delete anyway' : 'Delete',
+      onConfirm: async () => {
+        try {
+          await localEntities.Match.delete(m.id);
+          addLog(`Match deleted${(events || stats) ? ` (${events} events, ${stats} stats kept)` : ''}`, 'warning');
+          setMatches((p) => p.filter((x) => x.id !== m.id));
+        } catch (e) { addLog('Failed to delete match', 'warning'); }
+        setConfirm(null);
+      }
+    });
   };
 
   const activate = async (m) => {
@@ -60,6 +81,7 @@ export default function Matches() {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
+      {confirm && <ConfirmDialog title={confirm.title} message={confirm.message} details={confirm.details} confirmLabel={confirm.confirmLabel} onCancel={() => setConfirm(null)} onConfirm={confirm.onConfirm} />}
       <PageHeader title="Match Management" subtitle="Create, edit and load matches into the broadcast" onAdd={() => setEditing({ ...EMPTY })} />
 
       {editing && (

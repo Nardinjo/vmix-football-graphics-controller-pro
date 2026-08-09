@@ -40,7 +40,7 @@ export default function MatchTimeline({ events, teams, onDelete }) {
                   {ev.player_name} {ev.extra_data ? <span className="text-slate-500">· {ev.extra_data}</span> : ''}{ev.reason ? <span className="text-slate-500">· {ev.reason}</span> : ''}
                 </div>
               </div>
-              <div className="text-sm font-mono tabular-nums text-slate-300">{ev.minute}'</div>
+              <div className="text-sm font-mono tabular-nums text-slate-300">{ev.minute ?? 0}{ev.added_time ? <span className="text-amber-400">+{ev.added_time}</span> : ''}'</div>
               {onDelete && <button onClick={() => onDelete(ev.id)} className="text-slate-600 hover:text-red-400 p-1"><Trash2 size={14} /></button>}
             </div>
           );

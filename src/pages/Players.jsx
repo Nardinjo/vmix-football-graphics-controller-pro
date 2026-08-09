@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, User, Flag, Star } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageHeader, Field, Input, Select } from '@/pages/Matches';
 
 const EMPTY = { number: 1, full_name: '', short_name: '', position: 'MID', age: 18, nationality: '', height: '', weight: '', photo_url: '', team_id: '', is_captain: false, is_vice_captain: false, preferred_foot: 'Right' };
@@ -13,6 +14,7 @@ export default function Players() {
   const [teamFilter, setTeamFilter] = useState('');
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirm, setConfirm] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -30,12 +32,32 @@ export default function Players() {
     else { const c = await localEntities.Player.create(editing); addLog(`Player created: ${editing.full_name}`, 'success'); setPlayers((p) => [c, ...p]); setEditing(null); return; }
     await load(); setEditing(null);
   };
-  const remove = async (p) => { await localEntities.Player.delete(p.id); addLog(`Player deleted`, 'warning'); setPlayers((x) => x.filter((i) => i.id !== p.id)); };
+  const remove = async (p) => {
+    let count = 0;
+    try { const evs = await localEntities.MatchEvent.filter({ player_id: p.id }); count = evs.length; } catch (e) {}
+    setConfirm({
+      title: `Delete player "${p.full_name}"?`,
+      message: count
+        ? `${count} match event(s) reference this player and will remain in the timeline showing their name.`
+        : 'This action cannot be undone.',
+      details: count ? `Linked events: ${count}` : null,
+      confirmLabel: count ? 'Delete anyway' : 'Delete',
+      onConfirm: async () => {
+        try {
+          await localEntities.Player.delete(p.id);
+          addLog(`Player deleted${count ? ` (${count} events kept)` : ''}`, 'warning');
+          setPlayers((x) => x.filter((i) => i.id !== p.id));
+        } catch (e) { addLog('Failed to delete player', 'warning'); }
+        setConfirm(null);
+      }
+    });
+  };
 
   const posColor = { GK: 'bg-amber-500/20 text-amber-400', DEF: 'bg-blue-500/20 text-blue-400', MID: 'bg-green-500/20 text-green-400', FWD: 'bg-red-500/20 text-red-400' };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
+      {confirm && <ConfirmDialog title={confirm.title} message={confirm.message} details={confirm.details} confirmLabel={confirm.confirmLabel} onCancel={() => setConfirm(null)} onConfirm={confirm.onConfirm} />}
       <PageHeader title="Player Database" subtitle="Unlimited players with full profile data" onAdd={() => setEditing({ ...EMPTY })} addLabel="New Player" />
 
       <div className="flex items-center gap-3">
