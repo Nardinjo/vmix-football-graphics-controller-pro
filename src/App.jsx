@@ -24,6 +24,10 @@ import Media from '@/pages/Media';
 import Playlist from '@/pages/Playlist';
 import DataImport from '@/pages/DataImport';
 import Logs from '@/pages/Logs';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 // Add page imports here
 
 const AuthenticatedApp = () => {
@@ -52,6 +56,10 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<VmixProvider><BroadcastLayout /></VmixProvider>}>
           <Route path="/" element={<Dashboard />} />
