@@ -67,7 +67,7 @@ function splitCSVLine(line) {
 }
 
 export function parseJSON(text) {
-  return JSON.parse(text);
+  try { return JSON.parse(text); } catch (e) { return null; }
 }
 
 // Pick only fields that exist on a target schema, coercing numbers/booleans.

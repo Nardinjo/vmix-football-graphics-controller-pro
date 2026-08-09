@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useVmix } from '@/lib/vmixContext';
 import { useNetworkStatus } from '@/lib/useNetworkStatus';
-import { entities as localEntities, createBackup, listBackups, restoreBackup, deleteBackup, syncFromCloud, pushToCloud, exportDatabase } from '@/lib/dataLayer';
+import { entities as localEntities, createBackup, listBackups, restoreBackup, deleteBackup, syncFromCloud, pushToCloud, exportDatabase, importDatabase } from '@/lib/dataLayer';
 import { downloadJSON, downloadCSV } from '@/lib/localFile';
+import { versionString, validateUpdateManifest } from '@/lib/appVersion';
 import { Sliders, Wifi, WifiOff, User, Save, RefreshCw, Check, X, Cloud, Download, Upload, Database, HardDrive, RotateCcw, Trash2, CloudDownload, CloudUpload, Activity } from 'lucide-react';
 
 export default function Settings() {
-  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog, lastConnection, responseTime, test, vmixInputs, refreshInputs, offlineMatchMode, setOfflineMatchMode } = useVmix();
+  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog, lastConnection, responseTime, test, vmixInputs, refreshInputs, offlineMatchMode, setOfflineMatchMode, activeMatchId } = useVmix();
   const online = useNetworkStatus();
   const [form, setForm] = useState(settings);
   const [testResult, setTestResult] = useState(null);
@@ -198,6 +199,57 @@ export default function Settings() {
           <button onClick={exportMatchEventsCSV} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export Events (CSV)</button>
         </div>
         <p className="text-xs text-slate-500 mt-3">All exports run locally in your browser — no internet required. Use the Data Import page to load CSV/JSON from USB or disk.</p>
+      </div>
+
+      {/* Version & Updates */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><RefreshCw size={16} className="text-blue-400" /> Version & Updates</h3>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="text-white text-lg font-bold">{versionString()}</div>
+            <div className="text-xs text-slate-500 mt-0.5">No automatic online updates. Replace the portable package to update; local data is preserved.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-2 rounded-lg bg-white/5 text-slate-300 text-xs border border-white/10">CURRENT VERSION</span>
+            <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium cursor-pointer">
+              <Upload size={16} /> Import Update Manifest
+              <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const r = new FileReader();
+                r.onload = () => { const ok = validateUpdateManifest(r.result); addLog(ok ? 'Update manifest accepted — replace the portable app folder to apply' : 'Invalid update manifest', ok ? 'success' : 'warning'); };
+                r.readAsText(f);
+              }} />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Configuration Files */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Sliders size={16} className="text-blue-400" /> Configuration Files (vmix.json / graphics.json)</h3>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => downloadJSON('vmix.json', { vMix: { ip: form.ip, port: form.port, autoReconnect: form.autoReconnect, bridgePort: 8585 }, activeMatchId, offlineMatchMode })} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export vmix.json</button>
+          <button onClick={() => downloadJSON('graphics.json', { inputs: vmixInputs, shortcuts: { F1: 'Score Bug', F2: 'Lower Third', F3: 'Goal', F4: 'Substitution', F5: 'Yellow Card', F6: 'Red Card', F7: 'VAR Review', F8: 'Statistics', F9: 'Starting XI', F10: 'Full Screen' }, fieldMapping: {} })} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export graphics.json</button>
+        </div>
+      </div>
+
+      {/* Full Backup Package & Restore */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><HardDrive size={16} className="text-blue-400" /> Full Backup Package & Restore</h3>
+        <p className="text-xs text-slate-500 mb-3">A single portable package: local database + vMix config + graphics config. Copy it to another laptop to transfer the entire production environment.</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={async () => { const data = await exportDatabase(); downloadJSON(`vMixFootball_Backup_${new Date().toISOString().slice(0, 10)}.json`, { app: versionString(), generatedAt: new Date().toISOString(), config: { vMix: { ip: form.ip, port: form.port }, graphics: { inputs: vmixInputs } }, database: data }); addLog('Full backup package exported', 'success'); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"><Download size={16} /> Export Backup Package (JSON)</button>
+          <label className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm cursor-pointer">
+            <Upload size={16} /> Restore from File
+            <input type="file" accept=".json" className="hidden" onChange={(e) => {
+              const f = e.target.files?.[0]; if (!f) return;
+              const r = new FileReader();
+              r.onload = async () => { try { const d = JSON.parse(r.result); const res = await importDatabase(d.database || d); await loadBackups(); addLog(`Restored ${res.total} records from backup file`, 'success'); } catch (err) { addLog('Restore failed: invalid backup file', 'warning'); } };
+              r.readAsText(f);
+            }} />
+          </label>
+        </div>
+        <div className="text-xs text-slate-600 mt-3">On Windows, zip the exported JSON alongside the /media folder to also transfer logos & player photos.</div>
       </div>
 
       {/* Optional Cloud Sync */}

@@ -156,3 +156,17 @@ export async function exportDatabase() {
   data.__exported_at = new Date().toISOString();
   return data;
 }
+
+// Import a full DB blob previously produced by exportDatabase() (or the Full
+// Backup Package). Clears each store then restores rows — operator portable
+// restore. Keeps each row's existing id so references stay intact.
+export async function importDatabase(data) {
+  const stores = Object.keys(data || {}).filter((k) => ENTITY_NAMES.includes(k));
+  for (const s of stores) {
+    await localDb.clear(s);
+    const rows = Array.isArray(data[s]) ? data[s] : [];
+    if (rows.length) await localDb.putAll(s, rows);
+    booted[s] = true;
+  }
+  return { stores, total: stores.reduce((n, s) => n + (data[s]?.length || 0), 0) };
+}

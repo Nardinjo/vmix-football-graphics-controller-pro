@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useVmix } from '@/lib/vmixContext';
 import { useNetworkStatus } from '@/lib/useNetworkStatus';
+import ProductionStartup from '@/components/ProductionStartup';
 import {
   LayoutDashboard, Trophy, Users, User, Grid3x3, MonitorPlay, BarChart3,
   Sliders, Settings, ScrollText, Radio, Wifi, WifiOff, Search, Menu, X, Clock,
@@ -117,6 +118,7 @@ export default function BroadcastLayout() {
           <Outlet />
         </main>
       </div>
+      <ProductionStartup />
     </div>
   );
 }

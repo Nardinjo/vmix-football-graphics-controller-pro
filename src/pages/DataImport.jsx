@@ -41,7 +41,7 @@ export default function DataImport() {
 
       if (ext === 'json') {
         const parsed = parseJSON(text);
-        const list = Array.isArray(parsed) ? parsed : parsed.items || parsed[target.toLowerCase()] || (parsed.data ? parsed.data[target] : []) || [];
+        const list = Array.isArray(parsed) ? parsed : (parsed?.items || parsed?.[target.toLowerCase()] || (parsed?.data ? parsed.data[target] : []) || []);
         setRows(coerce(list));
         setStatus({ type: 'info', msg: `Parsed ${list.length} rows from JSON. Click Import to save into ${target}.` });
       } else if (ext === 'csv') {

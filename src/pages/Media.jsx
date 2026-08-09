@@ -64,8 +64,18 @@ export default function Media() {
             <Field label="Type"><Select value={editing.type} onChange={(v) => setEditing({ ...editing, type: v })} options={TYPES} labelKey="label" /></Field>
             <Field label="Category"><Input value={editing.category} onChange={(v) => setEditing({ ...editing, category: v })} /></Field>
             <Field label="Tags"><Input value={editing.tags} onChange={(v) => setEditing({ ...editing, tags: v })} /></Field>
-            <div className="col-span-full">
-              <Field label="File URL"><Input value={editing.url} onChange={(v) => setEditing({ ...editing, url: v })} /></Field>
+            <div className="col-span-full space-y-2">
+              <Field label="File URL (or upload from disk — stored locally)"><Input value={editing.url} onChange={(v) => setEditing({ ...editing, url: v })} /></Field>
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs cursor-pointer">
+                <Upload size={14} /> Upload from disk
+                <input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader();
+                  r.onload = () => { setEditing((s) => ({ ...s, url: r.result, name: s.name || f.name })); addLog(`Local file loaded: ${f.name}`, 'info'); };
+                  r.readAsDataURL(f);
+                }} />
+              </label>
+              {editing.url && String(editing.url).startsWith('data:') && <span className="text-[10px] text-green-400">✓ stored locally (no external URL)</span>}
             </div>
           </div>
           <div className="flex gap-2 mt-5">

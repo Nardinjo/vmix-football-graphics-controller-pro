@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { vmixBridge } from './vmixBridge';
 
 const VmixContext = createContext(null);
 
@@ -46,16 +47,27 @@ export function VmixProvider({ children }) {
     return () => clearInterval(t);
   }, []);
 
-  // Simulated connection lifecycle (browser cannot open raw TCP; this manages connection state)
-  const connect = useCallback(() => {
+  // Connection lifecycle. First tries the local desktop bridge (real vMix TCP
+  // over the LAN). If unavailable, falls back to a simulated connection so the
+  // UI keeps working. The local database is never affected by this.
+  const connect = useCallback(async () => {
     setConnecting(true);
+    try {
+      const res = await vmixBridge.ping();
+      if (res?.ok) {
+        setConnected(true); setConnecting(false);
+        setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null, vmixInputs: res.inputs?.length ? res.inputs : s.vmixInputs }));
+        addLog('Connected to vMix via local bridge', 'success');
+        return;
+      }
+    } catch (e) {}
+    // Fallback: simulated state (launch desktop/vmix-bridge.js for real control).
     setTimeout(() => {
-      setConnected(true);
-      setConnecting(false);
+      setConnected(true); setConnecting(false);
       setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: 612, vmixInputs: ['Score Bug', 'Lower Third', 'Goal', 'Substitution'] }));
-      addLog('Connected to vMix', 'success');
-    }, 600);
-  }, []);
+      addLog('Connected to vMix (simulated — run desktop bridge for real control)', 'warning');
+    }, 400);
+  }, [addLog]);
 
   const disconnect = useCallback(() => {
     setConnected(false);
@@ -96,8 +108,20 @@ export function VmixProvider({ children }) {
     addLog(v ? 'Offline Match Mode enabled — local data only' : 'Offline Match Mode disabled', v ? 'warning' : 'info');
   }, [addLog]);
 
-  const test = useCallback(() => {
+  const test = useCallback(async () => {
     setConnecting(true);
+    const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    try {
+      const res = await vmixBridge.ping();
+      if (res?.ok) {
+        const ms = Math.round(((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - t0);
+        setConnecting(false);
+        setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: ms }));
+        addLog(`vMix connection test OK (${ms}ms)`, 'success');
+        return { ok: true, ms };
+      }
+    } catch (e) {}
+    // Fallback simulated test
     return new Promise((resolve) => {
       setTimeout(() => {
         const ok = Math.random() > 0.15;
@@ -116,7 +140,8 @@ export function VmixProvider({ children }) {
 
   const triggerGraphic = useCallback((graphicName) => {
     addLog(`Graphic triggered: ${graphicName}`, 'graphic');
-  }, [addLog]);
+    if (connected) vmixBridge.triggerShortcut(graphicName);
+  }, [addLog, connected]);
 
   const value = {
     settings: state.settings,
@@ -140,6 +165,7 @@ export function VmixProvider({ children }) {
     test,
     vmixInputs: state.vmixInputs,
     refreshInputs,
+    vmix: vmixBridge,
   };
 
   return <VmixContext.Provider value={value}>{children}</VmixContext.Provider>;
