@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Play, Pause, RotateCcw, Plus, Minus, Clock, Radio, Save } from 'lucide-react';
 
@@ -16,7 +16,7 @@ export default function Scoreboard() {
 
   const load = useCallback(async () => {
     try {
-      const [matches, ts] = await Promise.all([base44.entities.Match.list(), base44.entities.Team.list()]);
+      const [matches, ts] = await Promise.all([localEntities.Match.list(), localEntities.Team.list()]);
       const m = matches.find((x) => x.is_active) || (activeMatchId ? matches.find((x) => x.id === activeMatchId) : null);
       const map = {}; ts.forEach((t) => (map[t.id] = t)); setTeams(map);
       if (m) { setMatch(m); setSeconds((m.current_minute || 0) * 60); setHalf(m.current_half || 1); }
@@ -34,7 +34,7 @@ export default function Scoreboard() {
   const persist = useCallback(async (overrides = {}) => {
     if (!match) return;
     const minute = Math.floor(seconds / 60);
-    await base44.entities.Match.update(match.id, { current_minute: minute, current_half: half, ...overrides });
+    await localEntities.Match.update(match.id, { current_minute: minute, current_half: half, ...overrides });
   }, [match, seconds, half]);
 
   const start = () => { setRunning(true); addLog('Timer started', 'success'); };
@@ -54,7 +54,7 @@ export default function Scoreboard() {
     const field = side === 'home' ? 'home_score' : 'away_score';
     const val = Math.max(0, (match[field] || 0) + delta);
     setMatch({ ...match, [field]: val });
-    await base44.entities.Match.update(match.id, { [field]: val });
+    await localEntities.Match.update(match.id, { [field]: val });
     addLog(`${side === 'home' ? home?.name : away?.name} ${delta > 0 ? 'goal' : 'goal removed'} → ${val}`, 'graphic');
   };
 

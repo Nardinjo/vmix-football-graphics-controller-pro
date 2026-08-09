@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, Image, Video, Search, Film, Upload } from 'lucide-react';
 import { PageHeader, Field, Input, Select } from '@/pages/Matches';
@@ -23,16 +23,16 @@ export default function Media() {
     { id: 'video', label: 'Videos', icon: Video },
   ];
 
-  const load = async () => { setLoading(true); try { setItems(await base44.entities.MediaItem.list()); } catch (e) {} setLoading(false); };
+  const load = async () => { setLoading(true); try { setItems(await localEntities.MediaItem.list()); } catch (e) {} setLoading(false); };
   useEffect(() => { load(); }, []);
 
   const save = async () => {
     if (!editing.name || !editing.url) { addLog('Name and URL required', 'warning'); return; }
-    if (editing.id) { await base44.entities.MediaItem.update(editing.id, editing); addLog('Media updated', 'success'); }
-    else { const c = await base44.entities.MediaItem.create(editing); setItems((p) => [c, ...p]); }
+    if (editing.id) { await localEntities.MediaItem.update(editing.id, editing); addLog('Media updated', 'success'); }
+    else { const c = await localEntities.MediaItem.create(editing); setItems((p) => [c, ...p]); }
     setEditing(null); await load();
   };
-  const remove = async (i) => { await base44.entities.MediaItem.delete(i.id); addLog('Media deleted', 'warning'); setItems((p) => p.filter((x) => x.id !== i.id)); };
+  const remove = async (i) => { await localEntities.MediaItem.delete(i.id); addLog('Media deleted', 'warning'); setItems((p) => p.filter((x) => x.id !== i.id)); };
 
   const isVideo = (url) => /\.(mp4|webm|mov)$/i.test(url || '');
   const filtered = items.filter((i) => (filter === 'all' || i.type === filter) && (i.name?.toLowerCase().includes(query.toLowerCase()) || i.tags?.toLowerCase().includes(query.toLowerCase())));

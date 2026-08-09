@@ -13,6 +13,10 @@ const DEFAULT_STATE = {
   connected: false,
   operatorName: 'Operator',
   activeMatchId: null,
+  offlineMatchMode: false,
+  lastConnection: null,
+  responseTime: null,
+  vmixInputs: [],
   log: [],
 };
 
@@ -32,9 +36,9 @@ export function VmixProvider({ children }) {
 
   // Persist settings/operator
   useEffect(() => {
-    const { settings, operatorName, activeMatchId } = state;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, operatorName, activeMatchId }));
-  }, [state.settings, state.operatorName, state.activeMatchId]);
+    const { settings, operatorName, activeMatchId, offlineMatchMode } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings, operatorName, activeMatchId, offlineMatchMode }));
+  }, [state.settings, state.operatorName, state.activeMatchId, state.offlineMatchMode]);
 
   // Clock
   useEffect(() => {
@@ -48,6 +52,7 @@ export function VmixProvider({ children }) {
     setTimeout(() => {
       setConnected(true);
       setConnecting(false);
+      setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: 612, vmixInputs: ['Score Bug', 'Lower Third', 'Goal', 'Substitution'] }));
       addLog('Connected to vMix', 'success');
     }, 600);
   }, []);
@@ -86,6 +91,29 @@ export function VmixProvider({ children }) {
     addLog(`Active match set`, 'info');
   }, [addLog]);
 
+  const setOfflineMatchMode = useCallback((v) => {
+    setState((s) => ({ ...s, offlineMatchMode: v }));
+    addLog(v ? 'Offline Match Mode enabled — local data only' : 'Offline Match Mode disabled', v ? 'warning' : 'info');
+  }, [addLog]);
+
+  const test = useCallback(() => {
+    setConnecting(true);
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const ok = Math.random() > 0.15;
+        const ms = Math.round(20 + Math.random() * 80);
+        setConnecting(false);
+        if (ok) { setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: ms })); addLog(`vMix connection test OK (${ms}ms)`, 'success'); resolve({ ok: true, ms }); }
+        else { addLog('vMix connection test failed — no response', 'warning'); resolve({ ok: false, ms: null }); }
+      }, 500);
+    });
+  }, [addLog]);
+
+  const refreshInputs = useCallback(() => {
+    setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
+    addLog('vMix inputs refreshed', 'info');
+  }, [addLog]);
+
   const triggerGraphic = useCallback((graphicName) => {
     addLog(`Graphic triggered: ${graphicName}`, 'graphic');
   }, [addLog]);
@@ -105,6 +133,13 @@ export function VmixProvider({ children }) {
     setActiveMatch,
     triggerGraphic,
     addLog,
+    offlineMatchMode: state.offlineMatchMode,
+    setOfflineMatchMode,
+    lastConnection: state.lastConnection,
+    responseTime: state.responseTime,
+    test,
+    vmixInputs: state.vmixInputs,
+    refreshInputs,
   };
 
   return <VmixContext.Provider value={value}>{children}</VmixContext.Provider>;

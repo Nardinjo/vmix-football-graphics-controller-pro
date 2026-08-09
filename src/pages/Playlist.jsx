@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Trash2, Play, GripVertical, ListVideo, Check, ArrowUp, ArrowDown } from 'lucide-react';
 import { PageHeader, Field, Input } from '@/pages/Matches';
@@ -13,7 +13,7 @@ export default function Playlist() {
 
   const load = async () => {
     try {
-      const list = await base44.entities.PlaylistItem.filter(activeMatchId ? { match_id: activeMatchId } : {});
+      const list = await localEntities.PlaylistItem.filter(activeMatchId ? { match_id: activeMatchId } : {});
       list.sort((a, b) => (a.order || 0) - (b.order || 0));
       setItems(list);
     } catch (e) {}
@@ -21,23 +21,23 @@ export default function Playlist() {
   useEffect(() => { load(); }, [activeMatchId]);
 
   const add = async (graphic) => {
-    await base44.entities.PlaylistItem.create({ name: graphic, graphic, match_id: activeMatchId, order: items.length, status: 'queued' });
+    await localEntities.PlaylistItem.create({ name: graphic, graphic, match_id: activeMatchId, order: items.length, status: 'queued' });
     addLog(`Added to playlist: ${graphic}`, 'info');
     setAdding(null);
     await load();
   };
-  const remove = async (i) => { await base44.entities.PlaylistItem.delete(i.id); setItems((p) => p.filter((x) => x.id !== i.id)); };
-  const exec = async (i) => { triggerGraphic(i.graphic); await base44.entities.PlaylistItem.update(i.id, { status: 'done' }); addLog(`▶ Executed: ${i.graphic}`, 'graphic'); await load(); };
+  const remove = async (i) => { await localEntities.PlaylistItem.delete(i.id); setItems((p) => p.filter((x) => x.id !== i.id)); };
+  const exec = async (i) => { triggerGraphic(i.graphic); await localEntities.PlaylistItem.update(i.id, { status: 'done' }); addLog(`▶ Executed: ${i.graphic}`, 'graphic'); await load(); };
   const move = async (i, dir) => {
     const idx = items.findIndex((x) => x.id === i.id);
     const swap = items[idx + dir];
     if (!swap) return;
-    await Promise.all([base44.entities.PlaylistItem.update(i.id, { order: swap.order }), base44.entities.PlaylistItem.update(swap.id, { order: i.order })]);
+    await Promise.all([localEntities.PlaylistItem.update(i.id, { order: swap.order }), localEntities.PlaylistItem.update(swap.id, { order: i.order })]);
     await load();
   };
   const clearDone = async () => {
     const done = items.filter((i) => i.status === 'done');
-    await base44.entities.PlaylistItem.deleteMany({ match_id: activeMatchId || undefined, status: 'done' });
+    await localEntities.PlaylistItem.deleteMany({ match_id: activeMatchId || undefined, status: 'done' });
     addLog(`Cleared ${done.length} done items`, 'warning');
     await load();
   };

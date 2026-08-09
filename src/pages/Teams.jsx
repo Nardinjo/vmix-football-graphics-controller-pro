@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, Users, Flag, User } from 'lucide-react';
 import { PageHeader, Field, Input } from '@/pages/Matches';
@@ -12,16 +12,16 @@ export default function Teams() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => { setLoading(true); try { setTeams(await base44.entities.Team.list()); } catch (e) {} setLoading(false); };
+  const load = async () => { setLoading(true); try { setTeams(await localEntities.Team.list()); } catch (e) {} setLoading(false); };
   useEffect(() => { load(); }, []);
 
   const save = async () => {
     if (!editing.name || !editing.short_name) { addLog('Team name and short name required', 'warning'); return; }
-    if (editing.id) { await base44.entities.Team.update(editing.id, editing); addLog(`Team updated: ${editing.name}`, 'success'); }
-    else { const c = await base44.entities.Team.create(editing); addLog(`Team created: ${editing.name}`, 'success'); setTeams((p) => [c, ...p]); setEditing(null); return; }
+    if (editing.id) { await localEntities.Team.update(editing.id, editing); addLog(`Team updated: ${editing.name}`, 'success'); }
+    else { const c = await localEntities.Team.create(editing); addLog(`Team created: ${editing.name}`, 'success'); setTeams((p) => [c, ...p]); setEditing(null); return; }
     await load(); setEditing(null);
   };
-  const remove = async (t) => { await base44.entities.Team.delete(t.id); addLog(`Team deleted: ${t.name}`, 'warning'); setTeams((p) => p.filter((x) => x.id !== t.id)); };
+  const remove = async (t) => { await localEntities.Team.delete(t.id); addLog(`Team deleted: ${t.name}`, 'warning'); setTeams((p) => p.filter((x) => x.id !== t.id)); };
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">

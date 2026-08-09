@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Goal, ArrowRightLeft, Square, Clock, Trash2, Activity, Plus } from 'lucide-react';
 import { PageHeader, Field, Select, Input } from '@/pages/Matches';
@@ -15,18 +15,18 @@ export default function Events() {
 
   const load = async () => {
     try {
-      const [matches, ts, ps] = await Promise.all([base44.entities.Match.list(), base44.entities.Team.list(), base44.entities.Player.list()]);
+      const [matches, ts, ps] = await Promise.all([localEntities.Match.list(), localEntities.Team.list(), localEntities.Player.list()]);
       const map = {}; ts.forEach((t) => (map[t.id] = t)); setTeams(map);
       const m = matches.find((x) => x.is_active) || (activeMatchId ? matches.find((x) => x.id === activeMatchId) : null);
       if (!m) return;
       setMatch(m); setPlayers(ps.filter((p) => p.team_id === m.home_team_id || p.team_id === m.away_team_id));
-      const ev = await base44.entities.MatchEvent.filter({ match_id: m.id });
+      const ev = await localEntities.MatchEvent.filter({ match_id: m.id });
       setEvents(ev.sort((a, b) => (b.minute || 0) - (a.minute || 0)));
     } catch (e) {}
   };
   useEffect(() => { load(); }, [activeMatchId]);
 
-  const reloadEvents = async () => { if (!match) return; const ev = await base44.entities.MatchEvent.filter({ match_id: match.id }); setEvents(ev.sort((a, b) => (b.minute || 0) - (a.minute || 0))); };
+  const reloadEvents = async () => { if (!match) return; const ev = await localEntities.MatchEvent.filter({ match_id: match.id }); setEvents(ev.sort((a, b) => (b.minute || 0) - (a.minute || 0))); };
 
   const submitGoal = async () => {
     if (!form.team_id || !form.player_id || !form.minute) { addLog('Select team, player and minute', 'warning'); return; }
@@ -34,9 +34,9 @@ export default function Events() {
     const isOwn = form.own_goal;
     const side = form.team_id === match.home_team_id ? (isOwn ? 'away' : 'home') : (isOwn ? 'home' : 'away');
     const field = side === 'home' ? 'home_score' : 'away_score';
-    await base44.entities.Match.update(match.id, { [field]: (match[field] || 0) + 1 });
-    await base44.entities.MatchEvent.create({ match_id: match.id, type: isOwn ? 'own_goal' : form.penalty ? 'penalty' : 'goal', team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: form.assist ? `Assist: ${form.assist}` : '' });
-    if (form.var) await base44.entities.MatchEvent.create({ match_id: match.id, type: 'var', team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: 'Goal confirmed by VAR' });
+    await localEntities.Match.update(match.id, { [field]: (match[field] || 0) + 1 });
+    await localEntities.MatchEvent.create({ match_id: match.id, type: isOwn ? 'own_goal' : form.penalty ? 'penalty' : 'goal', team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: form.assist ? `Assist: ${form.assist}` : '' });
+    if (form.var) await localEntities.MatchEvent.create({ match_id: match.id, type: 'var', team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: 'Goal confirmed by VAR' });
     addLog(`GOAL ${player?.full_name} (${form.minute}')`, 'graphic');
     setForm({ ...form, player_id: '', assist: '', own_goal: false, penalty: false, var: false });
     await load();
@@ -46,7 +46,7 @@ export default function Events() {
     if (!form.team_id || !form.player_out || !form.player_in || !form.minute) { addLog('Select team, players and minute', 'warning'); return; }
     const out = players.find((p) => p.full_name === form.player_out || p.id === form.player_out);
     const inn = players.find((p) => p.full_name === form.player_in || p.id === form.player_in);
-    await base44.entities.MatchEvent.create({ match_id: match.id, type: 'substitution', team_id: form.team_id, player_id: inn?.id, player_name: `${out?.full_name} -> ${inn?.full_name}`, minute: form.minute, reason: `${out?.number}<->${inn?.number}` });
+    await localEntities.MatchEvent.create({ match_id: match.id, type: 'substitution', team_id: form.team_id, player_id: inn?.id, player_name: `${out?.full_name} -> ${inn?.full_name}`, minute: form.minute, reason: `${out?.number}<->${inn?.number}` });
     addLog(`SUB ${out?.full_name} -> ${inn?.full_name} (${form.minute}')`, 'graphic');
     setForm({ ...form, player_out: '', player_in: '' });
     await reloadEvents();
@@ -57,18 +57,18 @@ export default function Events() {
     const player = players.find((p) => p.id === form.player_id);
     const type = form.card_type === 'red' ? 'red_card' : form.card_type === 'second_yellow' ? 'second_yellow' : 'yellow_card';
     const statField = form.card_type === 'red' ? 'red_cards' : 'yellow_cards';
-    const teamStat = await base44.entities.Statistic.filter({ match_id: match.id, team_id: form.team_id });
+    const teamStat = await localEntities.Statistic.filter({ match_id: match.id, team_id: form.team_id });
     if (teamStat[0]) {
       const inc = (teamStat[0][statField] || 0) + 1;
-      await base44.entities.Statistic.update(teamStat[0].id, { [statField]: inc });
+      await localEntities.Statistic.update(teamStat[0].id, { [statField]: inc });
     }
-    await base44.entities.MatchEvent.create({ match_id: match.id, type, team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: form.reason });
+    await localEntities.MatchEvent.create({ match_id: match.id, type, team_id: form.team_id, player_id: form.player_id, player_name: player?.full_name, minute: form.minute, reason: form.reason });
     addLog(`Card ${player?.full_name} (${form.minute}')`, 'graphic');
     setForm({ ...form, player_id: '', reason: '' });
     await reloadEvents();
   };
 
-  const remove = async (e) => { await base44.entities.MatchEvent.delete(e.id); addLog('Event removed', 'warning'); await reloadEvents(); };
+  const remove = async (e) => { await localEntities.MatchEvent.delete(e.id); addLog('Event removed', 'warning'); await reloadEvents(); };
   const teamName = (id) => teams[id]?.short_name || '—';
   const eventIcon = { goal: Goal, own_goal: Goal, penalty: Goal, substitution: ArrowRightLeft, yellow_card: Square, second_yellow: Square, red_card: Square, var: Activity, corner: Activity, offside: Activity, injury: Activity, assist: Goal };
   const eventColor = { goal: 'text-green-400', own_goal: 'text-amber-400', penalty: 'text-blue-400', substitution: 'text-purple-400', yellow_card: 'text-yellow-400', second_yellow: 'text-orange-400', red_card: 'text-red-400', var: 'text-cyan-400', assist: 'text-green-400' };

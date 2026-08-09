@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, AlignLeft, Play, EyeOff } from 'lucide-react';
 import { PageHeader, Field, Input, Select } from '@/pages/Matches';
@@ -14,7 +14,7 @@ export default function LowerThirds() {
 
   const load = async () => {
     try {
-      const [lt, ts] = await Promise.all([base44.entities.LowerThird.list(), base44.entities.Team.list()]);
+      const [lt, ts] = await Promise.all([localEntities.LowerThird.list(), localEntities.Team.list()]);
       setItems(lt); setTeams(ts);
     } catch (e) {}
   };
@@ -22,11 +22,11 @@ export default function LowerThirds() {
 
   const save = async () => {
     if (!editing.name || !editing.title) { addLog('Name and title required', 'warning'); return; }
-    if (editing.id) { await base44.entities.LowerThird.update(editing.id, editing); addLog('Lower third updated', 'success'); }
-    else { const c = await base44.entities.LowerThird.create(editing); setItems((p) => [c, ...p]); }
+    if (editing.id) { await localEntities.LowerThird.update(editing.id, editing); addLog('Lower third updated', 'success'); }
+    else { const c = await localEntities.LowerThird.create(editing); setItems((p) => [c, ...p]); }
     setEditing(null); await load();
   };
-  const remove = async (i) => { await base44.entities.LowerThird.delete(i.id); addLog('Lower third deleted', 'warning'); setItems((p) => p.filter((x) => x.id !== i.id)); };
+  const remove = async (i) => { await localEntities.LowerThird.delete(i.id); addLog('Lower third deleted', 'warning'); setItems((p) => p.filter((x) => x.id !== i.id)); };
   const animate = (i) => { triggerGraphic(`Lower Third: ${i.title}`); addLog(`Lower third animated in: ${i.title}`, 'graphic'); };
   const animateOut = (i) => { addLog(`Lower third animated out: ${i.title}`, 'warning'); };
 

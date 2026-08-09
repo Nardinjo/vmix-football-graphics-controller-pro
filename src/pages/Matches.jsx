@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Copy, Trash2, Upload, X, Trophy, MapPin, User, Cloud, Thermometer } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export default function Matches() {
   const load = async () => {
     setLoading(true);
     try {
-      const [ms, ts] = await Promise.all([base44.entities.Match.list(), base44.entities.Team.list()]);
+      const [ms, ts] = await Promise.all([localEntities.Match.list(), localEntities.Team.list()]);
       setMatches(ms);
       const m = {}; ts.forEach((t) => (m[t.id] = t)); setTeams(m);
     } catch (e) {}
@@ -28,10 +28,10 @@ export default function Matches() {
   const save = async () => {
     if (!editing.home_team_id || !editing.away_team_id || !editing.competition) { addLog('Match requires home, away and competition', 'warning'); return; }
     if (editing.id) {
-      await base44.entities.Match.update(editing.id, editing);
+      await localEntities.Match.update(editing.id, editing);
       addLog(`Match updated`, 'success');
     } else {
-      const created = await base44.entities.Match.create(editing);
+      const created = await localEntities.Match.create(editing);
       addLog(`Match created`, 'success');
       setMatches((p) => [created, ...p]);
       setEditing(null); return;
@@ -41,18 +41,18 @@ export default function Matches() {
 
   const duplicate = async (m) => {
     const { id, created_date, updated_date, created_by_id, ...rest } = m;
-    const dup = await base44.entities.Match.create({ ...rest, match_id: rest.match_id + ' (copy)', is_active: false, home_score: 0, away_score: 0, current_minute: 0, status: 'scheduled' });
+    const dup = await localEntities.Match.create({ ...rest, match_id: rest.match_id + ' (copy)', is_active: false, home_score: 0, away_score: 0, current_minute: 0, status: 'scheduled' });
     addLog('Match duplicated', 'success'); setMatches((p) => [dup, ...p]);
   };
 
   const remove = async (m) => {
-    await base44.entities.Match.delete(m.id);
+    await localEntities.Match.delete(m.id);
     addLog('Match deleted', 'warning'); setMatches((p) => p.filter((x) => x.id !== m.id));
   };
 
   const activate = async (m) => {
-    await base44.entities.Match.updateMany({ is_active: true }, { $set: { is_active: false } });
-    await base44.entities.Match.update(m.id, { is_active: true, status: 'live' });
+    await localEntities.Match.updateMany({ is_active: true }, { $set: { is_active: false } });
+    await localEntities.Match.update(m.id, { is_active: true, status: 'live' });
     setActiveMatch(m.id);
     addLog(`Match loaded: ${teamName(m.home_team_id)} vs ${teamName(m.away_team_id)}`, 'success');
     await load();

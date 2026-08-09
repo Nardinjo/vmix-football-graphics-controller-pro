@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Trash2, X, User, Flag, Star } from 'lucide-react';
 import { PageHeader, Field, Input, Select } from '@/pages/Matches';
@@ -16,7 +16,7 @@ export default function Players() {
 
   const load = async () => {
     setLoading(true);
-    try { const [ps, ts] = await Promise.all([base44.entities.Player.list(), base44.entities.Team.list()]); setPlayers(ps); setTeams(ts); } catch (e) {}
+    try { const [ps, ts] = await Promise.all([localEntities.Player.list(), localEntities.Team.list()]); setPlayers(ps); setTeams(ts); } catch (e) {}
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -26,11 +26,11 @@ export default function Players() {
 
   const save = async () => {
     if (!editing.full_name || !editing.team_id) { addLog('Player name and team required', 'warning'); return; }
-    if (editing.id) { await base44.entities.Player.update(editing.id, editing); addLog(`Player updated: ${editing.full_name}`, 'success'); }
-    else { const c = await base44.entities.Player.create(editing); addLog(`Player created: ${editing.full_name}`, 'success'); setPlayers((p) => [c, ...p]); setEditing(null); return; }
+    if (editing.id) { await localEntities.Player.update(editing.id, editing); addLog(`Player updated: ${editing.full_name}`, 'success'); }
+    else { const c = await localEntities.Player.create(editing); addLog(`Player created: ${editing.full_name}`, 'success'); setPlayers((p) => [c, ...p]); setEditing(null); return; }
     await load(); setEditing(null);
   };
-  const remove = async (p) => { await base44.entities.Player.delete(p.id); addLog(`Player deleted`, 'warning'); setPlayers((x) => x.filter((i) => i.id !== p.id)); };
+  const remove = async (p) => { await localEntities.Player.delete(p.id); addLog(`Player deleted`, 'warning'); setPlayers((x) => x.filter((i) => i.id !== p.id)); };
 
   const posColor = { GK: 'bg-amber-500/20 text-amber-400', DEF: 'bg-blue-500/20 text-blue-400', MID: 'bg-green-500/20 text-green-400', FWD: 'bg-red-500/20 text-red-400' };
 

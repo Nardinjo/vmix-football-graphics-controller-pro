@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Grid3x3, Save, Shuffle, Users } from 'lucide-react';
 import { Select } from '@/pages/Matches';
@@ -17,7 +17,7 @@ export default function Lineups() {
 
   const load = async () => {
     try {
-      const [matches, ts, ps] = await Promise.all([base44.entities.Match.list(), base44.entities.Team.list(), base44.entities.Player.list()]);
+      const [matches, ts, ps] = await Promise.all([localEntities.Match.list(), localEntities.Team.list(), localEntities.Player.list()]);
       const map = {}; ts.forEach((t) => (map[t.id] = t)); setTeams(map);
       const m = matches.find((x) => x.is_active) || (activeMatchId ? matches.find((x) => x.id === activeMatchId) : null);
       if (!m) return;

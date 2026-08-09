@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Radio, Trophy, Activity, Clock, Users, MonitorPlay, ArrowRight, Zap } from 'lucide-react';
 
@@ -14,9 +14,9 @@ export default function Dashboard() {
     (async () => {
       try {
         const [matches, teamsList, players] = await Promise.all([
-          base44.entities.Match.list(),
-          base44.entities.Team.list(),
-          base44.entities.Player.list(),
+          localEntities.Match.list(),
+          localEntities.Team.list(),
+          localEntities.Player.list(),
         ]);
         setStats({ matches: matches.length, teams: teamsList.length, players: players.length });
         const tMap = {};

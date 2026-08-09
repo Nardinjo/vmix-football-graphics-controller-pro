@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { BarChart3, Save, RotateCcw } from 'lucide-react';
 
@@ -24,14 +24,14 @@ export default function Statistics() {
 
   const load = async () => {
     try {
-      const [matches, ts] = await Promise.all([base44.entities.Match.list(), base44.entities.Team.list()]);
+      const [matches, ts] = await Promise.all([localEntities.Match.list(), localEntities.Team.list()]);
       const map = {}; ts.forEach((t) => (map[t.id] = t)); setTeams(map);
       const m = matches.find((x) => x.is_active) || (activeMatchId ? matches.find((x) => x.id === activeMatchId) : null);
       if (!m) return;
       setMatch(m);
-      const stats = await base44.entities.Statistic.filter({ match_id: m.id });
-      const h = stats.find((s) => s.team_id === m.home_team_id) || await base44.entities.Statistic.create({ match_id: m.id, team_id: m.home_team_id });
-      const a = stats.find((s) => s.team_id === m.away_team_id) || await base44.entities.Statistic.create({ match_id: m.id, team_id: m.away_team_id });
+      const stats = await localEntities.Statistic.filter({ match_id: m.id });
+      const h = stats.find((s) => s.team_id === m.home_team_id) || await localEntities.Statistic.create({ match_id: m.id, team_id: m.home_team_id });
+      const a = stats.find((s) => s.team_id === m.away_team_id) || await localEntities.Statistic.create({ match_id: m.id, team_id: m.away_team_id });
       setHomeStat(h); setAwayStat(a);
     } catch (e) {}
   };
@@ -42,7 +42,7 @@ export default function Statistics() {
     const setStat = side === 'home' ? setHomeStat : setAwayStat;
     const updated = { ...stat, [key]: value };
     setStat(updated);
-    await base44.entities.Statistic.update(stat.id, { [key]: value });
+    await localEntities.Statistic.update(stat.id, { [key]: value });
   };
 
   const save = () => { addLog('Statistics synced to vMix', 'success'); };
@@ -50,7 +50,7 @@ export default function Statistics() {
     if (!homeStat || !awayStat) return;
     const resetFields = {};
     FIELDS.forEach((f) => (resetFields[f.key] = f.key === 'possession' ? 50 : 0));
-    await Promise.all([base44.entities.Statistic.update(homeStat.id, resetFields), base44.entities.Statistic.update(awayStat.id, resetFields)]);
+    await Promise.all([localEntities.Statistic.update(homeStat.id, resetFields), localEntities.Statistic.update(awayStat.id, resetFields)]);
     setHomeStat({ ...homeStat, ...resetFields }); setAwayStat({ ...awayStat, ...resetFields });
     addLog('Statistics reset', 'warning');
   };

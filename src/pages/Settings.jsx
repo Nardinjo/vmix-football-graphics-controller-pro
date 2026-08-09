@@ -1,34 +1,92 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useVmix } from '@/lib/vmixContext';
-import { Sliders, Wifi, WifiOff, User, Save, RefreshCw, Check, X, Cloud, Download, Upload } from 'lucide-react';
+import { useNetworkStatus } from '@/lib/useNetworkStatus';
+import { entities as localEntities, createBackup, listBackups, restoreBackup, deleteBackup, syncFromCloud, pushToCloud, exportDatabase } from '@/lib/dataLayer';
+import { downloadJSON, downloadCSV } from '@/lib/localFile';
+import { Sliders, Wifi, WifiOff, User, Save, RefreshCw, Check, X, Cloud, Download, Upload, Database, HardDrive, RotateCcw, Trash2, CloudDownload, CloudUpload, Activity } from 'lucide-react';
 
 export default function Settings() {
-  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog } = useVmix();
+  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog, lastConnection, responseTime, test, vmixInputs, refreshInputs, offlineMatchMode, setOfflineMatchMode } = useVmix();
+  const online = useNetworkStatus();
   const [form, setForm] = useState(settings);
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [backups, setBackups] = useState([]);
+  const [busy, setBusy] = useState('');
+
+  const loadBackups = async () => { try { setBackups(await listBackups()); } catch (e) {} };
+  useEffect(() => { loadBackups(); }, []);
 
   const save = () => { updateSettings(form); addLog('Settings saved', 'success'); };
 
-  const test = () => {
+  const runTest = async () => {
     setTesting(true); setTestResult(null);
-    setTimeout(() => { setTesting(false); setTestResult('success'); addLog(`Connection test to ${form.ip}:${form.port}`, 'success'); }, 800);
+    const res = await test();
+    setTestResult(res);
+    setTesting(false);
+  };
+
+  const doBackup = async () => {
+    setBusy('backup');
+    try { const b = await createBackup('Manual Backup'); await loadBackups(); addLog(`Backup created: ${b.label}`, 'success'); } catch (e) {}
+    setBusy('');
+  };
+
+  const doRestore = async (id) => {
+    setBusy('restore-' + id);
+    try { await restoreBackup(id); addLog('Backup restored', 'success'); } catch (e) {}
+    setBusy('');
+  };
+
+  const doDeleteBackup = async (id) => { await deleteBackup(id); await loadBackups(); addLog('Backup deleted', 'warning'); };
+
+  const pullCloud = async () => { setBusy('pull'); try { await syncFromCloud(); addLog('Pulled data from cloud', 'success'); } catch (e) {} setBusy(''); };
+  const pushCloud = async () => { setBusy('push'); try { await pushToCloud(); addLog('Pushed local data to cloud', 'success'); } catch (e) {} setBusy(''); };
+
+  const exportDB = async () => {
+    const data = await exportDatabase();
+    downloadJSON(`MATCH_BACKUP_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`, data);
+    addLog('Database exported (JSON)', 'success');
+  };
+
+  const exportTeamsCSV = async () => {
+    const teams = await localEntities.Team.list();
+    downloadCSV('TEAM.csv', teams, ['name', 'short_name', 'country', 'league', 'coach', 'captain', 'primary_color', 'secondary_color']);
+    addLog('Teams exported (CSV)', 'success');
+  };
+
+  const exportMatchEventsCSV = async () => {
+    const ev = await localEntities.MatchEvent.list();
+    downloadCSV('MATCH_EVENTS.csv', ev, ['minute', 'type', 'team_id', 'player_name', 'reason']);
+    addLog('Match events exported (CSV)', 'success');
   };
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Sliders size={22} className="text-blue-400" /> Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">vMix connection, operator profile and data management</p>
+        <p className="text-sm text-slate-400 mt-1">vMix connection, diagnostics, offline mode, backups and data management</p>
       </div>
 
-      {/* vMix Connection */}
+      {/* Offline status banner */}
+      <div className={`rounded-2xl p-5 border ${online ? 'bg-green-500/5 border-green-500/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <span className={`w-3 h-3 rounded-full ${online ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span className="text-sm font-semibold text-white">{online ? 'ONLINE' : 'OFFLINE'}</span>
+            <span className="text-xs text-slate-400">· Internet {online ? 'available' : 'unavailable — app runs on local data'} · vMix {connected ? 'CONNECTED' : 'DISCONNECTED'}</span>
+          </div>
+          {!online && connected && <span className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">LOCAL NETWORK · MATCH READY</span>}
+        </div>
+      </div>
+
+      {/* vMix Connection + Diagnostics */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-400" /> vMix TCP Connection</h3>
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-400" /> vMix Connection & Diagnostics</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">vMix IP Address</label>
-            <input value={form.ip} onChange={(e) => setForm({ ...form, ip: e.target.value })} placeholder="127.0.0.1"
+            <label className="block text-xs text-slate-400 mb-1.5">vMix IP Address (local LAN)</label>
+            <input value={form.ip} onChange={(e) => setForm({ ...form, ip: e.target.value })} placeholder="192.168.1.100"
               className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500" />
           </div>
           <div>
@@ -43,21 +101,56 @@ export default function Settings() {
             </label>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+          <Diag label="Connection Status" value={connected ? 'Connected' : 'Disconnected'} good={connected} />
+          <Diag label="Endpoint" value={`${form.ip}:${form.port}`} />
+          <Diag label="Last Successful" value={lastConnection ? new Date(lastConnection).toLocaleTimeString('en-GB') : '—'} />
+          <Diag label="Response Time" value={responseTime != null ? `${responseTime} ms` : '—'} good={responseTime != null} />
+        </div>
+
         <div className="flex flex-wrap items-center gap-2 mt-5">
           <button onClick={save} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"><Save size={16} /> Save Settings</button>
-          <button onClick={test} disabled={testing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-50"><RefreshCw size={16} className={testing ? 'animate-spin' : ''} /> {testing ? 'Testing...' : 'Test Connection'}</button>
-          {testResult === 'success' && <span className="flex items-center gap-1 text-sm text-green-400"><Check size={15} /> Connection successful</span>}
+          <button onClick={runTest} disabled={testing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-50"><RefreshCw size={16} className={testing ? 'animate-spin' : ''} /> {testing ? 'Testing...' : 'Test'}</button>
+          <button onClick={refreshInputs} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Database size={16} /> Refresh Inputs</button>
+          {testResult && (testResult.ok
+            ? <span className="flex items-center gap-1 text-sm text-green-400"><Check size={15} /> Test OK ({testResult.ms} ms)</span>
+            : <span className="flex items-center gap-1 text-sm text-red-400"><X size={15} /> No response</span>)}
           {connected ? (
             <button onClick={disconnect} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm border border-red-500/20 ml-auto"><WifiOff size={16} /> Disconnect</button>
           ) : (
             <button onClick={connect} disabled={connecting} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium ml-auto disabled:opacity-50"><Wifi size={16} /> {connecting ? 'Connecting...' : 'Connect'}</button>
           )}
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <div className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 ${connected ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-            {connected ? <Check size={14} /> : <X size={14} />} {connected ? 'Connected' : 'Disconnected'}
+
+        {vmixInputs.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-white/5">
+            <div className="text-xs uppercase tracking-widest text-slate-500 mb-2">vMix Inputs</div>
+            <div className="flex flex-wrap gap-2">
+              {vmixInputs.map((i, idx) => (
+                <span key={idx} className="text-xs px-2.5 py-1 rounded-lg bg-white/5 text-slate-300 border border-white/10">{idx} · {i}</span>
+              ))}
+            </div>
           </div>
-          <span className="text-xs text-slate-500">Endpoint: {form.ip}:{form.port}</span>
+        )}
+        <p className="text-xs text-slate-600 mt-3">vMix talks over your local LAN to {form.ip}:{form.port}. Internet is <span className="text-slate-400">not</span> required for this connection.</p>
+      </div>
+
+      {/* Offline Match Mode */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Activity size={16} className="text-purple-400" /> Offline Match Mode</h3>
+            <p className="text-xs text-slate-400 mt-1">Disables cloud/API calls and runs entirely on the local database and local vMix connection.</p>
+          </div>
+          <button onClick={() => setOfflineMatchMode(!offlineMatchMode)} className={`relative w-14 h-8 rounded-full transition-colors ${offlineMatchMode ? 'bg-purple-600' : 'bg-white/10'}`}>
+            <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${offlineMatchMode ? 'translate-x-6' : ''}`} />
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-4 text-xs">
+          <span className="px-2 py-1 rounded bg-white/5 text-slate-300">OFFLINE MATCH MODE {offlineMatchMode ? 'ON' : 'OFF'}</span>
+          <span className="px-2 py-1 rounded bg-white/5 text-slate-300">LOCAL DATA</span>
+          <span className={`px-2 py-1 rounded ${connected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>VMIX {connected ? 'CONNECTED' : 'DISCONNECTED'}</span>
         </div>
       </div>
 
@@ -73,29 +166,58 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* API Integrations */}
+      {/* Local Backups */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Cloud size={16} className="text-blue-400" /> API Data Sources</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {['AllSportsAPI', 'API-Football', 'Football-Data.org', 'Sportmonks', 'LiveScore', 'Flashscore'].map((api) => (
-            <div key={api} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white/5 text-sm">
-              <span className="text-slate-300">{api}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-500/20 text-slate-400">Manual</span>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2"><HardDrive size={16} className="text-blue-400" /> Local Backups & Snapshots</h3>
+          <button onClick={doBackup} disabled={busy === 'backup'} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium disabled:opacity-50"><Save size={16} /> {busy === 'backup' ? 'Saving...' : 'Backup Now'}</button>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">Auto-saved snapshots are stored locally in IndexedDB. Restoring replaces current local data.</p>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {backups.length === 0 && <div className="text-xs text-slate-500 py-4 text-center">No snapshots yet.</div>}
+          {backups.map((b) => (
+            <div key={b.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/5">
+              <HardDrive size={14} className="text-slate-500" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm text-white truncate">{b.label}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{new Date(b.time).toLocaleString('en-GB')}</div>
+              </div>
+              <button onClick={() => doRestore(b.id)} disabled={busy === 'restore-' + b.id} className="px-3 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs flex items-center gap-1 disabled:opacity-50"><RotateCcw size={12} /> {busy === 'restore-' + b.id ? '...' : 'Restore'}</button>
+              <button onClick={() => doDeleteBackup(b.id)} className="px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs"><Trash2 size={12} /></button>
             </div>
           ))}
         </div>
-        <p className="text-xs text-slate-500 mt-3">Connect a data source to auto-populate matches, teams and live scores. Manual mode is active by default.</p>
       </div>
 
-      {/* Data Management */}
+      {/* Data Management / Export / Import (offline) */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
-        <h3 className="text-sm font-semibold text-white mb-4">Data Management</h3>
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Database size={16} className="text-blue-400" /> Data Management (Offline Export / Import)</h3>
         <div className="flex flex-wrap gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export Database</button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Upload size={16} /> Import Database</button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Cloud size={16} /> Cloud Backup</button>
+          <button onClick={exportDB} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export Database (JSON)</button>
+          <button onClick={exportTeamsCSV} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export Teams (CSV)</button>
+          <button onClick={exportMatchEventsCSV} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export Events (CSV)</button>
+        </div>
+        <p className="text-xs text-slate-500 mt-3">All exports run locally in your browser — no internet required. Use the Data Import page to load CSV/JSON from USB or disk.</p>
+      </div>
+
+      {/* Optional Cloud Sync */}
+      <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Cloud size={16} className="text-blue-400" /> Optional Cloud Sync</h3>
+        <p className="text-xs text-slate-500 mb-3">Cloud sync is <span className="text-slate-400">optional</span>. Local data is always the primary source during live production. Sync only when online.</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={pullCloud} disabled={!online || busy === 'pull'} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-40"><CloudDownload size={16} /> {busy === 'pull' ? 'Syncing...' : 'Pull from Cloud'}</button>
+          <button onClick={pushCloud} disabled={!online || busy === 'push'} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-40"><CloudUpload size={16} /> {busy === 'push' ? 'Syncing...' : 'Push to Cloud'}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Diag({ label, value, good }) {
+  return (
+    <div className="rounded-lg bg-black/30 border border-white/5 px-3 py-2.5">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className={`text-sm font-medium mt-0.5 ${good ? 'text-green-400' : 'text-white'}`}>{value}</div>
     </div>
   );
 }
