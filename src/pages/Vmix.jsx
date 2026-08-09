@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVmix } from '@/lib/vmixContext';
 import { useNetworkStatus } from '@/lib/useNetworkStatus';
 import { GRAPHIC_KEYS, SHORTCUT_ACTIONS } from '@/lib/vmixDefaults';
-import { Wifi, WifiOff, Plug, PlugZap, RefreshCw, MonitorPlay, Keyboard, ChevronDown, ChevronRight, Activity, Database } from 'lucide-react';
+import { Wifi, WifiOff, Plug, PlugZap, RefreshCw, MonitorPlay, Keyboard, ChevronDown, ChevronRight, Activity, Database, Eraser } from 'lucide-react';
 
 export default function Vmix() {
   const vmix = useVmix();
@@ -46,7 +46,10 @@ export default function Vmix() {
 
       {/* Input mapping */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-5">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Database size={16} className="text-blue-400" /> Graphic → vMix Input Mapping</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Database size={16} className="text-blue-400" /> Graphic → vMix Input Mapping</h3>
+          <button onClick={() => GRAPHIC_KEYS.forEach((g) => setGraphicInput(g, ''))} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs"><Eraser size={13} /> Clear all</button>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-slate-500 text-xs uppercase tracking-wider">

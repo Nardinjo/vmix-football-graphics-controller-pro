@@ -17,8 +17,9 @@ export const GRAPHIC_KEYS = [
   'VAR',
 ];
 
-// Default vMix input per graphic (the operator sets the real input on the vMix page).
-export const DEFAULT_GRAPHIC_INPUTS = Object.fromEntries(GRAPHIC_KEYS.map((g) => [g, g]));
+// No auto-mapping by default — the operator decides which vMix input each graphic
+// uses on the vMix page. Each graphic starts unmapped (blank) until you set it.
+export const DEFAULT_GRAPHIC_INPUTS = {};
 
 // For each graphic, maps our data keys -> the vMix text field name inside that input.
 export const DEFAULT_FIELD_MAP = {
