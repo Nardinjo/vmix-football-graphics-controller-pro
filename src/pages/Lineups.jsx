@@ -3,6 +3,7 @@ import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
 import { Grid3x3, Save, Shuffle, Users } from 'lucide-react';
 import { Select } from '@/pages/Matches';
+import TeamSwitcher from '@/components/live/TeamSwitcher';
 
 const FORMATIONS = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2', '3-4-3'];
 
@@ -74,9 +75,7 @@ export default function Lineups() {
               <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: selectedTeam?.primary_color, color: selectedTeam?.secondary_color }}>{selectedTeam?.short_name?.slice(0,3)}</div>
               <span className="text-white font-medium">{selectedTeam?.name}</span>
             </div>
-            <div className="w-48">
-              <Select value={teamId} onChange={setTeamId} options={[home, away].filter(Boolean).map((t) => ({ id: t.id, name: `${t.name}${t.id === match.home_team_id ? ' (Home)' : ' (Away)'}` }))} />
-            </div>
+            <TeamSwitcher home={home} away={away} value={teamId} onChange={setTeamId} />
             <div className="w-40">
               <Select value={formation} onChange={setFormation} options={FORMATIONS.map((f) => ({ id: f, name: f }))} />
             </div>
