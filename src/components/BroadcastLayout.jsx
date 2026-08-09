@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { useVmix } from '@/lib/vmixContext';
+import { useVmix, useClock } from '@/lib/vmixContext';
 import { useNetworkStatus } from '@/lib/useNetworkStatus';
 import ProductionStartup from '@/components/ProductionStartup';
 import {
@@ -25,7 +25,8 @@ const NAV = [
 ];
 
 export default function BroadcastLayout() {
-  const { connected, connecting, clock, operatorName, offlineMatchMode } = useVmix();
+  const { connected, simulated, mode, connecting, operatorName, offlineMatchMode } = useVmix();
+  const clock = useClock();
   const online = useNetworkStatus();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,8 +63,8 @@ export default function BroadcastLayout() {
         </nav>
         <div className="p-3 border-t border-white/5">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-            <span>{connected ? 'vMix Connected' : 'vMix Offline'}</span>
+            <div className={`w-2 h-2 rounded-full ${mode === 'real' ? 'bg-green-500 animate-pulse' : mode === 'sim' ? 'bg-blue-400' : 'bg-red-500'}`} />
+            <span>{mode === 'real' ? 'vMix Real' : mode === 'sim' ? 'vMix Simulation' : 'vMix Offline'}</span>
           </div>
         </div>
       </aside>
@@ -95,9 +96,9 @@ export default function BroadcastLayout() {
                 <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}`} />
                 {online ? 'ONLINE' : 'OFFLINE'}
               </div>
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${connected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
-                {connected ? 'VMIX CONNECTED' : connecting ? 'CONNECTING...' : 'VMIX OFFLINE'}
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${mode === 'real' ? 'bg-green-500/10 text-green-400 border-green-500/20' : mode === 'sim' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                {mode === 'real' ? <Wifi size={14} /> : <WifiOff size={14} />}
+                {mode === 'real' ? 'VMIX REAL' : mode === 'sim' ? 'VMIX SIMULATION' : connecting ? 'CONNECTING...' : 'VMIX OFFLINE'}
               </div>
               {!online && connected && <span className="hidden sm:inline text-[10px] px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">LOCAL NETWORK</span>}
               {offlineMatchMode && <span className="hidden sm:inline text-[10px] px-2 py-1 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">OFFLINE MATCH MODE</span>}

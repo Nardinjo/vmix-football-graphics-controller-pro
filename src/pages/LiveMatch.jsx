@@ -12,7 +12,7 @@ import {
 
 export default function LiveMatch() {
   const vmix = useVmix();
-  const { connected, connecting, connect, activeMatchId, shortcuts, sendGraphicData, takeGraphic, clearAllGraphics, addLog } = vmix;
+  const { connected, simulated, mode, connecting, connect, activeMatchId, shortcuts, sendGraphicData, takeGraphic, clearAllGraphics, addLog } = vmix;
   const online = useNetworkStatus();
 
   const [match, setMatch] = useState(null);
@@ -312,10 +312,10 @@ export default function LiveMatch() {
     <div className="max-w-[1800px] mx-auto space-y-4">
       {/* Status bar */}
       <div className="flex items-center gap-2 flex-wrap text-xs">
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${connected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{connected ? <Wifi size={13} /> : <WifiOff size={13} />} VMIX {connected ? 'CONNECTED' : connecting ? 'CONNECTING' : 'DISCONNECTED'}</div>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${mode === 'real' ? 'bg-green-500/10 text-green-400 border-green-500/20' : mode === 'sim' ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{mode === 'real' ? <Wifi size={13} /> : <WifiOff size={13} />} VMIX {mode === 'real' ? 'REAL' : mode === 'sim' ? 'SIMULATION' : connecting ? 'CONNECTING' : 'DISCONNECTED'}</div>
+        {!connected && !simulated && <button onClick={connect} disabled={connecting} className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium disabled:opacity-50">CONNECT VMIX</button>}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-green-500/10 text-green-400 border-green-500/20"><Database size={13} /> LOCAL DATA READY</div>
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${online ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>{online ? <Wifi size={13} /> : <WifiOff size={13} />} INTERNET {online ? 'ONLINE' : 'OFFLINE'}</div>
-        {!connected && <button onClick={connect} disabled={connecting} className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium disabled:opacity-50">CONNECT VMIX</button>}
         <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-300">{match.competition || 'Match'} · <span className="text-white font-medium">{home?.short_name || 'HOM'} {match.home_score ?? 0} – {match.away_score ?? 0} {away?.short_name || 'AWY'}</span></div>
         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${saving ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-white/5 text-slate-300 border-white/10'}`}>{saving ? 'SAVING…' : 'SAVED'}</div>
       </div>
