@@ -6,13 +6,13 @@ import ActionModal from '@/components/live/ActionModal';
 import MatchTimeline from '@/components/live/MatchTimeline';
 import { Link } from 'react-router-dom';
 import {
-  Trophy, Goal, Square, Ban, Repeat, User, Radio, ShieldAlert, Clock, Wifi, WifiOff,
-  Database, Check, X, Play, Pause, RotateCcw, Plus, Minus, LayoutGrid, BarChart3, Eraser, Flag, FlagTriangleRight, AlertCircle
+  Trophy, Goal, Square, Ban, Repeat, User, ShieldAlert, Clock, Wifi, WifiOff,
+  Database, Play, Pause, RotateCcw, Plus, Minus, LayoutGrid, BarChart3, Eraser, Flag, FlagTriangleRight, AlertCircle
 } from 'lucide-react';
 
 export default function LiveMatch() {
   const vmix = useVmix();
-  const { connected, connecting, connect, operatorName, activeMatchId, shortcuts, sendGraphicData, takeGraphic, clearAllGraphics, addLog } = vmix;
+  const { connected, connecting, connect, activeMatchId, shortcuts, sendGraphicData, takeGraphic, clearAllGraphics, addLog } = vmix;
   const online = useNetworkStatus();
 
   const [match, setMatch] = useState(null);

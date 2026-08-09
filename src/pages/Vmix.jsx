@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useVmix } from '@/lib/vmixContext';
 import { useNetworkStatus } from '@/lib/useNetworkStatus';
 import { GRAPHIC_KEYS, SHORTCUT_ACTIONS } from '@/lib/vmixDefaults';
-import { Wifi, WifiOff, Plug, PlugZap, RefreshCw, Save, MonitorPlay, Keyboard, ChevronDown, ChevronRight, Activity, Database } from 'lucide-react';
+import { Wifi, WifiOff, Plug, PlugZap, RefreshCw, MonitorPlay, Keyboard, ChevronDown, ChevronRight, Activity, Database } from 'lucide-react';
 
 export default function Vmix() {
   const vmix = useVmix();
