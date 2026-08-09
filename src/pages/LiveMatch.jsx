@@ -124,6 +124,20 @@ export default function LiveMatch() {
 
   const playerById = (side, id) => getPlayers(side).find((p) => p.id === id);
 
+  // Persist a match event AND show it in the timeline instantly (optimistic),
+  // so the chosen player + minute never "revert" after pressing TAKE.
+  async function recordEvent(data) {
+    const tmpId = 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    setEvents((prev) => [{ id: tmpId, match_id: match.id, created_date: new Date().toISOString(), ...data }, ...prev]);
+    try {
+      await localEntities.MatchEvent.create({ match_id: match.id, ...data });
+      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
+    } catch (e) {
+      addLog('Event could not be saved', 'warning');
+      setEvents((prev) => prev.filter((x) => x.id !== tmpId));
+    }
+  }
+
   async function takeGoal(p) {
     const team = teamOf(p.side);
     const scorer = playerById(p.side, p.scorerId);
@@ -135,13 +149,12 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { [field]: ns, current_minute: p.minute, current_half: half });
-      await localEntities.MatchEvent.create({ match_id: match.id, type: p.goalType === 'Own Goal' ? 'own_goal' : 'goal', team_id: team?.id, player_id: scorer?.id, player_name: scorer?.full_name, minute: p.minute, reason: p.goalType, extra_data: assist ? `Assist: ${assist.full_name}` : '' });
-      if (p.isVar) await localEntities.MatchEvent.create({ match_id: match.id, type: 'var', team_id: team?.id, minute: p.minute, reason: 'Goal confirmed' });
+      await recordEvent({ type: p.goalType === 'Own Goal' ? 'own_goal' : 'goal', team_id: team?.id, player_id: scorer?.id, player_name: scorer?.full_name, minute: p.minute, reason: p.goalType, extra_data: assist ? `Assist: ${assist.full_name}` : '' });
+      if (p.isVar) await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, reason: 'Goal confirmed' });
       bumpStat(team?.id, 'shots_on_target', 1);
       sendGraphicData('Goal', { PLAYER_NAME: scorer?.full_name || '', PLAYER_NUMBER: scorer?.number ?? '', TEAM_NAME: team?.name || '', TEAM_SHORT: team?.short_name || '', MINUTE: p.minute, ASSIST: assist?.full_name || '', GOAL_TYPE: p.goalType });
       takeGraphic('Goal');
       addLog(`GOAL · ${p.side.toUpperCase()} · ${scorer?.full_name} (${p.minute}')`, 'success');
-      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
     } catch (e) { addLog('Goal save failed', 'warning'); }
   }
 
@@ -151,12 +164,11 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await localEntities.MatchEvent.create({ match_id: match.id, type: 'yellow_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute });
+      await recordEvent({ type: 'yellow_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute });
       bumpStat(team?.id, 'yellow_cards', 1);
       sendGraphicData('Yellow Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute });
       takeGraphic('Yellow Card');
       addLog(`YELLOW · ${p.side.toUpperCase()} · ${pl?.full_name} (${p.minute}')`, 'warning');
-      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
     } catch (e) { addLog('Yellow card save failed', 'warning'); }
   }
 
@@ -166,12 +178,11 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await localEntities.MatchEvent.create({ match_id: match.id, type: 'red_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute, reason: p.reason });
+      await recordEvent({ type: 'red_card', team_id: team?.id, player_id: pl?.id, player_name: pl?.full_name, minute: p.minute, reason: p.reason });
       bumpStat(team?.id, 'red_cards', 1);
       sendGraphicData('Red Card', { PLAYER_NAME: pl?.full_name || '', PLAYER_NUMBER: pl?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute, REASON: p.reason || '' });
       takeGraphic('Red Card');
       addLog(`RED · ${p.side.toUpperCase()} · ${pl?.full_name} (${p.minute}')`, 'warning');
-      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
     } catch (e) { addLog('Red card save failed', 'warning'); }
   }
 
@@ -182,11 +193,10 @@ export default function LiveMatch() {
     setModal(null);
     try {
       await localEntities.Match.update(match.id, { current_minute: p.minute, current_half: half });
-      await localEntities.MatchEvent.create({ match_id: match.id, type: 'substitution', team_id: team?.id, minute: p.minute, player_name: `${out?.full_name} ➡ ${inn?.full_name}`, extra_data: `#${out?.number ?? ''} OUT /#${inn?.number ?? ''} IN` });
+      await recordEvent({ type: 'substitution', team_id: team?.id, minute: p.minute, player_name: `${out?.full_name} ➡ ${inn?.full_name}`, extra_data: `#${out?.number ?? ''} OUT /#${inn?.number ?? ''} IN` });
       sendGraphicData('Substitution', { PLAYER_OUT_NAME: out?.full_name || '', PLAYER_OUT_NUMBER: out?.number ?? '', PLAYER_IN_NAME: inn?.full_name || '', PLAYER_IN_NUMBER: inn?.number ?? '', TEAM_NAME: team?.name || '', MINUTE: p.minute });
       takeGraphic('Substitution');
       addLog(`SUB · ${p.side.toUpperCase()} · #${out?.number} ➡ #${inn?.number} (${p.minute}')`, 'success');
-      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
     } catch (e) { addLog('Substitution save failed', 'warning'); }
   }
 
@@ -216,11 +226,10 @@ export default function LiveMatch() {
     const team = teamOf(p.side);
     setModal(null);
     try {
-      await localEntities.MatchEvent.create({ match_id: match.id, type: 'var', team_id: team?.id, minute: p.minute, reason: `${p.status}${p.reason ? ' — ' + p.reason : ''}` });
+      await recordEvent({ type: 'var', team_id: team?.id, minute: p.minute, reason: `${p.status}${p.reason ? ' — ' + p.reason : ''}` });
       sendGraphicData('VAR', { VAR_STATUS: p.status || '', REASON: p.reason || '', MINUTE: p.minute, TEAM_NAME: team?.name || '' });
       takeGraphic('VAR');
       addLog(`VAR · ${p.status} · ${p.side.toUpperCase()} (${p.minute}')`, 'warning');
-      setEvents(await localEntities.MatchEvent.filter({ match_id: match.id }));
     } catch (e) { addLog('VAR save failed', 'warning'); }
   }
 
