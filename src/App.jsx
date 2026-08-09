@@ -9,7 +9,8 @@ import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import BroadcastLayout from '@/components/BroadcastLayout';
 import { VmixProvider } from '@/lib/vmixContext';
-import Dashboard from '@/pages/Dashboard';
+import LiveMatch from '@/pages/LiveMatch';
+import Vmix from '@/pages/Vmix';
 import Matches from '@/pages/Matches';
 import Teams from '@/pages/Teams';
 import Players from '@/pages/Players';
@@ -62,7 +63,8 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<VmixProvider><BroadcastLayout /></VmixProvider>}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<LiveMatch />} />
+          <Route path="/vmix" element={<Vmix />} />
           <Route path="/matches" element={<Matches />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/players" element={<Players />} />

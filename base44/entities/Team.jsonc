@@ -34,11 +34,20 @@
     },
     "coach": {
       "type": "string",
-      "title": "Coach"
+      "title": "Head Coach"
+    },
+    "assistant_coach": {
+      "type": "string",
+      "title": "Assistant Coach"
     },
     "captain": {
       "type": "string",
       "title": "Captain"
+    },
+    "formation": {
+      "type": "string",
+      "title": "Formation",
+      "default": "4-3-3"
     }
   },
   "required": [
