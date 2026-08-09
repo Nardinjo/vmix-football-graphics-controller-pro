@@ -1,0 +1,39 @@
+{
+  "name": "MediaItem",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "type": {
+      "type": "string",
+      "title": "Type",
+      "enum": [
+        "player_photo",
+        "team_logo",
+        "competition_logo",
+        "sponsor",
+        "background",
+        "video"
+      ]
+    },
+    "category": {
+      "type": "string",
+      "title": "Category"
+    },
+    "url": {
+      "type": "string",
+      "title": "File URL"
+    },
+    "tags": {
+      "type": "string",
+      "title": "Tags"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "url"
+  ]
+}

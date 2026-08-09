@@ -1,0 +1,46 @@
+{
+  "name": "LowerThird",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "type": {
+      "type": "string",
+      "title": "Type",
+      "enum": [
+        "player",
+        "coach",
+        "official",
+        "reporter",
+        "commentator",
+        "sponsor",
+        "custom"
+      ],
+      "default": "custom"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title Line"
+    },
+    "subtitle": {
+      "type": "string",
+      "title": "Subtitle Line"
+    },
+    "team_id": {
+      "type": "string",
+      "title": "Team ID"
+    },
+    "color": {
+      "type": "string",
+      "title": "Accent Color",
+      "default": "#3b82f6"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "title"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "name": "PlaylistItem",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "graphic": {
+      "type": "string",
+      "title": "Graphic"
+    },
+    "match_id": {
+      "type": "string",
+      "title": "Match ID"
+    },
+    "order": {
+      "type": "number",
+      "title": "Order",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "queued",
+        "playing",
+        "done"
+      ],
+      "default": "queued"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "name",
+    "graphic"
+  ]
+}

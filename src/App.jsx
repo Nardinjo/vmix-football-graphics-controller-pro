@@ -18,6 +18,11 @@ import Graphics from '@/pages/Graphics';
 import Scoreboard from '@/pages/Scoreboard';
 import Statistics from '@/pages/Statistics';
 import Settings from '@/pages/Settings';
+import Events from '@/pages/Events';
+import LowerThirds from '@/pages/LowerThirds';
+import Media from '@/pages/Media';
+import Playlist from '@/pages/Playlist';
+import DataImport from '@/pages/DataImport';
 import Logs from '@/pages/Logs';
 // Add page imports here
 
@@ -56,6 +61,11 @@ const AuthenticatedApp = () => {
           <Route path="/lineups" element={<Lineups />} />
           <Route path="/graphics" element={<Graphics />} />
           <Route path="/scoreboard" element={<Scoreboard />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/lower-thirds" element={<LowerThirds />} />
+          <Route path="/media" element={<Media />} />
+          <Route path="/playlist" element={<Playlist />} />
+          <Route path="/import" element={<DataImport />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/logs" element={<Logs />} />

@@ -3,7 +3,8 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useVmix } from '@/lib/vmixContext';
 import {
   LayoutDashboard, Trophy, Users, User, Grid3x3, MonitorPlay, BarChart3,
-  Sliders, Settings, ScrollText, Radio, Wifi, WifiOff, Search, Menu, X, Clock
+  Sliders, Settings, ScrollText, Radio, Wifi, WifiOff, Search, Menu, X, Clock,
+  Zap, AlignLeft, Images, ListVideo, Upload
 } from 'lucide-react';
 
 const NAV = [
@@ -13,8 +14,13 @@ const NAV = [
   { to: '/players', label: 'Players', icon: User },
   { to: '/lineups', label: 'Lineups', icon: Grid3x3 },
   { to: '/graphics', label: 'Graphics', icon: MonitorPlay },
+  { to: '/events', label: 'Events', icon: Zap },
   { to: '/scoreboard', label: 'Scoreboard', icon: Radio },
   { to: '/statistics', label: 'Statistics', icon: BarChart3 },
+  { to: '/lower-thirds', label: 'Lower Thirds', icon: AlignLeft },
+  { to: '/media', label: 'Media', icon: Images },
+  { to: '/playlist', label: 'Playlist', icon: ListVideo },
+  { to: '/import', label: 'Import Data', icon: Upload },
   { to: '/settings', label: 'Settings', icon: Sliders },
   { to: '/logs', label: 'Logs', icon: ScrollText },
 ];
