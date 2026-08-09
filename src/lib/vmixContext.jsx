@@ -50,6 +50,13 @@ export function VmixProvider({ children }) {
   // Connection lifecycle. First tries the local desktop bridge (real vMix TCP
   // over the LAN). If unavailable, falls back to a simulated connection so the
   // UI keeps working. The local database is never affected by this.
+  const addLog = useCallback((message, type = 'info') => {
+    setState((s) => ({
+      ...s,
+      log: [{ id: Date.now() + Math.random(), message, type, time: new Date().toISOString() }, ...s.log].slice(0, 200),
+    }));
+  }, []);
+
   const connect = useCallback(async () => {
     setConnecting(true);
     try {
@@ -82,13 +89,6 @@ export function VmixProvider({ children }) {
       // no-op; connection is manual-initiated
     }
   }, [connected, state.settings.autoReconnect]);
-
-  const addLog = useCallback((message, type = 'info') => {
-    setState((s) => ({
-      ...s,
-      log: [{ id: Date.now() + Math.random(), message, type, time: new Date().toISOString() }, ...s.log].slice(0, 200),
-    }));
-  }, []);
 
   const updateSettings = useCallback((settings) => {
     setState((s) => ({ ...s, settings: { ...s.settings, ...settings } }));
