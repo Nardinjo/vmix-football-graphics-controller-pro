@@ -20,6 +20,12 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Allow the renderer to talk directly to vMix's local HTTP Web API
+      // (http://127.0.0.1:8088). vMix sends no CORS headers, so without this
+      // the cross-origin reads (status XML / input list) are blocked. No
+      // bridge is needed.
+      webSecurity: false,
+      allowRunningInsecureContent: true,
     },
   });
 

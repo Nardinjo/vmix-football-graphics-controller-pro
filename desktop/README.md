@@ -16,7 +16,7 @@ LOCAL DESKTOP APP  ->  LOCAL DATABASE (IndexedDB)  ->  LOCAL MEDIA  ->  LOCAL LA
 | Local database   | Browser IndexedDB, persistent on this PC               |
 | Team/Player/Match| IndexedDB stores (see `src/lib/dataLayer.js`)           |
 | Media (logos/photos)| Uploaded from disk, stored as local data URLs       |
-| vMix connection  | `vmix-bridge.js` — TCP to vMix over the LAN            |
+| vMix connection  | Direct HTTP to vMix's Web API (Web Controller, port 8088) |
 | Configuration    | `vmix.json` / `graphics.json` (exported from Settings) |
 | Backups          | Single `vMixFootball_Backup_YYYY-MM-DD.json` package   |
 
@@ -51,20 +51,19 @@ vMix-Football-Pro/
     /backups     (vMixFootball_Backup_*.json packages)
 ```
 
-## Running vMix control (real LAN TCP)
+## Running vMix control (direct Web API — no bridge)
 
-A browser cannot open a raw TCP socket, so real vMix control goes through the
-tiny local bridge:
+The app talks straight to vMix's built-in HTTP Web Controller — no Node bridge,
+no TCP, no extra process to run.
 
-```bash
-# On the operator laptop (the vMix PC is at 192.168.1.100 on the LAN)
-VMIX_HOST=192.168.1.100 VMIX_PORT=8099 node desktop/vmix-bridge.js
-# Bridge listens on http://127.0.0.1:8585 and forwards to vMix over TCP.
-```
+1. In vMix: **Settings → Web Controller** → enable it (default port **8088**).
+2. In the app (Settings or vMix page): set **vMix IP** to `127.0.0.1` (vMix on
+   this PC) or the vMix PC's LAN IP (e.g. `192.168.1.100`), and **Web API Port**
+   to `8088`. Press **Connect**.
 
-Then the web/desktop app talks to `http://127.0.0.1:8585` automatically
-(see `src/lib/vmixBridge.js`). If the bridge is not running, the app falls back
-to simulated state — the UI and local database keep working either way.
+The desktop shell disables web security (`webSecurity: false` in `main.js`) so
+it can read vMix's status XML and auto-detect inputs. If vMix is unreachable the
+app falls back to simulated state — the UI and local database keep working.
 
 Supported vMix functions (mapped from the app): `SetText`, `SetImage`,
 `OverlayIn1` / `OverlayOut1`, `Play`, `Pause`, `Restart`, `TriggerShortcut`,
