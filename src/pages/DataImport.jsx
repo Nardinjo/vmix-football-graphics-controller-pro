@@ -224,6 +224,14 @@ export default function DataImport() {
       const rows = list.map((r) => coerce(mapRow(r, target), target)).filter((r) => Object.keys(r).length);
       setRawCount(list.length);
       setMapped(rows);
+      if (!rows.length && (ext === 'xlsx' || ext === 'xls')) {
+        // Looks like a two-team roster sheet (K/L home, M/N away) rather than a
+        // headered table — route to the roster importer automatically.
+        setTarget('Roster');
+        await loadRoster(file);
+        setWorking(false);
+        return;
+      }
       if (!rows.length) { setStatus({ type: 'error', msg: 'No recognizable rows found. Check that column headers match the expected names (see below).' }); }
       else {
         const teamNote = target === 'Player' ? ' Team names will be auto-linked or created.' : target === 'Match' ? ' Home/Away team names will be auto-linked or created.' : '';
