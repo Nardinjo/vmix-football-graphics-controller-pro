@@ -7,9 +7,16 @@ import { Wifi, WifiOff, Plug, PlugZap, RefreshCw, MonitorPlay, Keyboard, Chevron
 export default function Vmix() {
   const vmix = useVmix();
   const online = useNetworkStatus();
-  const { settings, updateSettings, connected, connecting, connect, disconnect, test, refreshInputs, vmixInputs, graphicInputMap, fieldMap, shortcuts, setGraphicInput, setField, setShortcut, lastCommand, log } = vmix;
+  const { settings, updateSettings, connected, connecting, connect, disconnect, test, refreshInputs, vmixInputs, graphicInputMap, fieldMap, shortcuts, setGraphicInput, setField, setShortcut, lastCommand, log, addLog, applyVmixTitles } = vmix;
   const [openGraphic, setOpenGraphic] = useState(null);
   const [testRes, setTestRes] = useState(null);
+  const [titlesText, setTitlesText] = useState('');
+
+  const applyTitles = () => {
+    const list = String(titlesText || '').split(/[\n,;]+/).map((t) => t.trim()).filter(Boolean);
+    const mapped = applyVmixTitles(titlesText);
+    addLog(`Applied ${list.length} vMix title(s)${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
+  };
 
   const runTest = async () => { setTestRes(await test()); };
   const inputCls = 'px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500';
@@ -50,6 +57,22 @@ export default function Vmix() {
           <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Database size={16} className="text-blue-400" /> Graphic → vMix Input Mapping</h3>
           <button onClick={() => GRAPHIC_KEYS.forEach((g) => setGraphicInput(g, ''))} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs"><Eraser size={13} /> Clear all</button>
         </div>
+        <div className="mb-4 rounded-lg bg-black/20 border border-white/5 p-3">
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+            <span className="text-xs text-slate-400">Detected vMix titles ({vmixInputs.length})</span>
+            <span className="text-[10px] text-slate-500">Auto-detected on Connect in the desktop app · in a browser, paste titles from vMix below</span>
+          </div>
+          <div className="flex gap-2">
+            <textarea value={titlesText} onChange={(e) => setTitlesText(e.target.value)} placeholder="Paste vMix input titles, one per line (or comma-separated)…" rows={2} className="flex-1 px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-xs text-white outline-none focus:border-blue-500 resize-none" />
+            <button onClick={applyTitles} className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium self-stretch">Apply</button>
+          </div>
+          {vmixInputs.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {vmixInputs.map((i, idx) => <span key={idx} className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-300 border border-white/10">{i}</span>)}
+            </div>
+          )}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-slate-500 text-xs uppercase tracking-wider">

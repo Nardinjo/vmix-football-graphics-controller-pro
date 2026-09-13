@@ -106,6 +106,15 @@ export function VmixProvider({ children }) {
     return count;
   }, []);
 
+  // Manually supply vMix's title list (for the web browser, where CORS blocks
+  // reading the Web API). Sets the available inputs and auto-maps graphics.
+  const applyVmixTitles = useCallback((raw) => {
+    const titles = String(raw || '').split(/[\n,;]+/).map((t) => t.trim()).filter(Boolean);
+    if (!titles.length) return 0;
+    setState((s) => ({ ...s, vmixInputs: titles }));
+    return autoMapInputs(titles);
+  }, [autoMapInputs]);
+
   // REAL connection = the local Node bridge answered. Otherwise SIMULATION.
   const connect = useCallback(async () => {
     setConnecting(true);
@@ -286,7 +295,7 @@ export function VmixProvider({ children }) {
       offlineMatchMode: state.offlineMatchMode, setOfflineMatchMode,
       lastConnection: state.lastConnection, responseTime: state.responseTime,
       test,
-      vmixInputs: state.vmixInputs, refreshInputs,
+      vmixInputs: state.vmixInputs, refreshInputs, applyVmixTitles,
       vmix,
       graphicInputMap: state.graphicInputMap, fieldMap: state.fieldMap, shortcuts: state.shortcuts,
       lastCommand: state.lastCommand,
