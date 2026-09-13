@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
-import { Plus, Save, Trash2, X, Users, Flag, User } from 'lucide-react';
+import { Plus, Save, Trash2, X, Users, Flag, User, Download } from 'lucide-react';
+import { downloadCSV } from '@/lib/localFile';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageHeader, Field, Input } from '@/pages/Matches';
 
-const EMPTY = { name: '', short_name: '', country: '', league: '', logo_url: '', primary_color: '#1e3a8a', secondary_color: '#ffffff', coach: '', captain: '' };
+const EMPTY = { name: '', short_name: '', nickname: '', country: '', league: '', logo_url: '', crest_url: '', primary_color: '#1e3a8a', secondary_color: '#ffffff', coach: '', captain: '' };
 
 export default function Teams() {
   const { addLog } = useVmix();
@@ -44,10 +45,19 @@ export default function Teams() {
     });
   };
 
+  const exportCsv = () => {
+    const cols = ['name', 'short_name', 'nickname', 'country', 'league', 'logo_url', 'crest_url', 'primary_color', 'secondary_color', 'coach', 'assistant_coach', 'captain', 'formation'];
+    downloadCSV(`teams-${new Date().toISOString().slice(0, 10)}.csv`, teams, cols);
+    addLog(`Exported ${teams.length} teams to CSV`, 'success');
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
       {confirm && <ConfirmDialog title={confirm.title} message={confirm.message} details={confirm.details} confirmLabel={confirm.confirmLabel} onCancel={() => setConfirm(null)} onConfirm={confirm.onConfirm} />}
       <PageHeader title="Team Management" subtitle="Manage clubs, colors, coaches and captains" onAdd={() => setEditing({ ...EMPTY })} addLabel="New Team" />
+      <div className="flex justify-end -mt-2">
+        <button onClick={exportCsv} disabled={!teams.length} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium disabled:opacity-40"><Download size={14} /> Export CSV</button>
+      </div>
 
       {editing && (
         <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
@@ -60,7 +70,9 @@ export default function Teams() {
             <Field label="Short Name"><Input value={editing.short_name} onChange={(v) => setEditing({ ...editing, short_name: v })} placeholder="RMA" /></Field>
             <Field label="Country"><Input icon={Flag} value={editing.country} onChange={(v) => setEditing({ ...editing, country: v })} /></Field>
             <Field label="League"><Input value={editing.league} onChange={(v) => setEditing({ ...editing, league: v })} /></Field>
+            <Field label="Nickname"><Input value={editing.nickname} onChange={(v) => setEditing({ ...editing, nickname: v })} placeholder="The Reds" /></Field>
             <Field label="Logo URL (PNG)"><Input value={editing.logo_url} onChange={(v) => setEditing({ ...editing, logo_url: v })} /></Field>
+            <Field label="Club Crest URL"><Input value={editing.crest_url} onChange={(v) => setEditing({ ...editing, crest_url: v })} /></Field>
             <Field label="Coach"><Input icon={User} value={editing.coach} onChange={(v) => setEditing({ ...editing, coach: v })} /></Field>
             <Field label="Captain"><Input value={editing.captain} onChange={(v) => setEditing({ ...editing, captain: v })} /></Field>
             <Field label="Primary Color"><div className="flex items-center gap-2"><input type="color" value={editing.primary_color} onChange={(e) => setEditing({ ...editing, primary_color: e.target.value })} className="w-10 h-10 rounded bg-transparent border border-white/10 cursor-pointer" /><Input value={editing.primary_color} onChange={(v) => setEditing({ ...editing, primary_color: v })} /></div></Field>

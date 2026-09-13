@@ -10,6 +10,10 @@
       "type": "string",
       "title": "Short Name"
     },
+    "nickname": {
+      "type": "string",
+      "title": "Nickname"
+    },
     "country": {
       "type": "string",
       "title": "Country"
@@ -21,6 +25,10 @@
     "logo_url": {
       "type": "string",
       "title": "Logo URL (PNG)"
+    },
+    "crest_url": {
+      "type": "string",
+      "title": "Club Crest URL"
     },
     "primary_color": {
       "type": "string",

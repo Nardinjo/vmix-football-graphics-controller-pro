@@ -28,6 +28,11 @@
       "type": "number",
       "title": "Age"
     },
+    "birthday": {
+      "type": "string",
+      "format": "date",
+      "title": "Birthday"
+    },
     "nationality": {
       "type": "string",
       "title": "Nationality"
@@ -56,6 +61,16 @@
     "is_vice_captain": {
       "type": "boolean",
       "title": "Vice Captain",
+      "default": false
+    },
+    "is_starting": {
+      "type": "boolean",
+      "title": "Starting XI",
+      "default": false
+    },
+    "is_substitute": {
+      "type": "boolean",
+      "title": "Substitute",
       "default": false
     },
     "preferred_foot": {

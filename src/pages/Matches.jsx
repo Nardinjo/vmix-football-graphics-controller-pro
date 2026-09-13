@@ -4,7 +4,7 @@ import { useVmix } from '@/lib/vmixContext';
 import { Plus, Save, Copy, Trash2, Upload, X, Trophy, MapPin, User, Cloud, Thermometer } from 'lucide-react';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
-const EMPTY = { home_team_id: '', away_team_id: '', competition: '', venue: '', kickoff_time: '', match_id: '', referee: '', weather: '', temperature: '', attendance: 0, status: 'scheduled', home_score: 0, away_score: 0, current_half: 1, current_minute: 0, is_active: false };
+const EMPTY = { home_team_id: '', away_team_id: '', competition: '', season: '', round: '', venue: '', kickoff_time: '', match_id: '', referee: '', var_referee: '', weather: '', temperature: '', attendance: 0, status: 'scheduled', home_score: 0, away_score: 0, current_half: 1, current_minute: 0, is_active: false };
 
 export default function Matches() {
   const { setActiveMatch, addLog } = useVmix();
@@ -94,10 +94,13 @@ export default function Matches() {
             <Field label="Home Team"><Select value={editing.home_team_id} onChange={(v) => setEditing({ ...editing, home_team_id: v })} options={Object.values(teams)} /></Field>
             <Field label="Away Team"><Select value={editing.away_team_id} onChange={(v) => setEditing({ ...editing, away_team_id: v })} options={Object.values(teams)} /></Field>
             <Field label="Competition"><Input value={editing.competition} onChange={(v) => setEditing({ ...editing, competition: v })} placeholder="UEFA Champions League" /></Field>
+            <Field label="Season"><Input value={editing.season} onChange={(v) => setEditing({ ...editing, season: v })} placeholder="2025/26" /></Field>
+            <Field label="Round"><Input value={editing.round} onChange={(v) => setEditing({ ...editing, round: v })} placeholder="Matchday 6" /></Field>
             <Field label="Venue"><Input icon={MapPin} value={editing.venue} onChange={(v) => setEditing({ ...editing, venue: v })} /></Field>
             <Field label="Kickoff Time"><Input type="datetime-local" value={editing.kickoff_time} onChange={(v) => setEditing({ ...editing, kickoff_time: v })} /></Field>
             <Field label="Match ID"><Input value={editing.match_id} onChange={(v) => setEditing({ ...editing, match_id: v })} /></Field>
             <Field label="Referee"><Input icon={User} value={editing.referee} onChange={(v) => setEditing({ ...editing, referee: v })} /></Field>
+            <Field label="VAR Referee"><Input icon={User} value={editing.var_referee} onChange={(v) => setEditing({ ...editing, var_referee: v })} /></Field>
             <Field label="Weather"><Input icon={Cloud} value={editing.weather} onChange={(v) => setEditing({ ...editing, weather: v })} /></Field>
             <Field label="Temperature"><Input icon={Thermometer} value={editing.temperature} onChange={(v) => setEditing({ ...editing, temperature: v })} /></Field>
             <Field label="Attendance"><Input type="number" value={editing.attendance} onChange={(v) => setEditing({ ...editing, attendance: Number(v) })} /></Field>

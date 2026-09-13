@@ -14,6 +14,14 @@
       "type": "string",
       "title": "Competition"
     },
+    "season": {
+      "type": "string",
+      "title": "Season"
+    },
+    "round": {
+      "type": "string",
+      "title": "Round"
+    },
     "venue": {
       "type": "string",
       "title": "Venue"
@@ -30,6 +38,10 @@
     "referee": {
       "type": "string",
       "title": "Referee"
+    },
+    "var_referee": {
+      "type": "string",
+      "title": "VAR Referee"
     },
     "weather": {
       "type": "string",

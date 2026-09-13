@@ -35,6 +35,11 @@
       "title": "Fouls",
       "default": 0
     },
+    "offsides": {
+      "type": "number",
+      "title": "Offsides",
+      "default": 0
+    },
     "yellow_cards": {
       "type": "number",
       "title": "Yellow Cards",

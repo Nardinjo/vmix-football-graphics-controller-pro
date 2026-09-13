@@ -10,6 +10,7 @@ const FIELDS = [
   { key: 'shots_on_target', label: 'Shots On Target', max: 20 },
   { key: 'corners', label: 'Corners', max: 20 },
   { key: 'fouls', label: 'Fouls', max: 30 },
+  { key: 'offsides', label: 'Offsides', max: 20 },
   { key: 'yellow_cards', label: 'Yellow Cards', max: 10 },
   { key: 'red_cards', label: 'Red Cards', max: 5 },
   { key: 'pass_accuracy', label: 'Pass Accuracy %', max: 100, suffix: '%' },

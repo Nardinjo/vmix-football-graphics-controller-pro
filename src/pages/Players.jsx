@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { entities as localEntities } from '@/lib/dataLayer';
 import { useVmix } from '@/lib/vmixContext';
-import { Plus, Save, Trash2, X, User, Flag, Star } from 'lucide-react';
+import { Plus, Save, Trash2, X, User, Flag, Star, Download } from 'lucide-react';
+import { downloadCSV } from '@/lib/localFile';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { PageHeader, Field, Input, Select } from '@/pages/Matches';
 
-const EMPTY = { number: 1, full_name: '', short_name: '', position: 'MID', age: 18, nationality: '', height: '', weight: '', photo_url: '', team_id: '', is_captain: false, is_vice_captain: false, preferred_foot: 'Right' };
+const EMPTY = { number: 1, full_name: '', short_name: '', position: 'MID', age: 18, birthday: '', nationality: '', height: '', weight: '', photo_url: '', team_id: '', is_captain: false, is_vice_captain: false, is_starting: false, is_substitute: false, preferred_foot: 'Right' };
 
 export default function Players() {
   const { addLog } = useVmix();
@@ -55,6 +56,13 @@ export default function Players() {
 
   const posColor = { GK: 'bg-amber-500/20 text-amber-400', DEF: 'bg-blue-500/20 text-blue-400', MID: 'bg-green-500/20 text-green-400', FWD: 'bg-red-500/20 text-red-400' };
 
+  const exportCsv = () => {
+    const rows = filtered.map((p) => ({ ...p, team: teamName(p.team_id) }));
+    const cols = ['number', 'full_name', 'short_name', 'position', 'age', 'birthday', 'nationality', 'height', 'weight', 'photo_url', 'team', 'is_captain', 'is_vice_captain', 'is_starting', 'is_substitute', 'preferred_foot'];
+    downloadCSV(`players-${new Date().toISOString().slice(0, 10)}.csv`, rows, cols);
+    addLog(`Exported ${rows.length} players to CSV`, 'success');
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto space-y-5">
       {confirm && <ConfirmDialog title={confirm.title} message={confirm.message} details={confirm.details} confirmLabel={confirm.confirmLabel} onCancel={() => setConfirm(null)} onConfirm={confirm.onConfirm} />}
@@ -63,6 +71,7 @@ export default function Players() {
       <div className="flex items-center gap-3">
         <div className="w-56"><Select value={teamFilter} onChange={setTeamFilter} options={[{ id: '', name: 'All Teams' }, ...teams]} /></div>
         <span className="text-xs text-slate-500">{filtered.length} players</span>
+        <button onClick={exportCsv} disabled={!filtered.length} className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium disabled:opacity-40"><Download size={14} /> Export CSV</button>
       </div>
 
       {editing && (
@@ -78,14 +87,17 @@ export default function Players() {
             <Field label="Team"><Select value={editing.team_id} onChange={(v) => setEditing({ ...editing, team_id: v })} options={teams} /></Field>
             <Field label="Position"><Select value={editing.position} onChange={(v) => setEditing({ ...editing, position: v })} options={[{ id: 'GK', name: 'Goalkeeper' }, { id: 'DEF', name: 'Defender' }, { id: 'MID', name: 'Midfielder' }, { id: 'FWD', name: 'Forward' }]} /></Field>
             <Field label="Age"><Input type="number" value={editing.age} onChange={(v) => setEditing({ ...editing, age: Number(v) })} /></Field>
+            <Field label="Birthday"><Input type="date" value={editing.birthday} onChange={(v) => setEditing({ ...editing, birthday: v })} /></Field>
             <Field label="Nationality"><Input icon={Flag} value={editing.nationality} onChange={(v) => setEditing({ ...editing, nationality: v })} /></Field>
             <Field label="Preferred Foot"><Select value={editing.preferred_foot} onChange={(v) => setEditing({ ...editing, preferred_foot: v })} options={[{ id: 'Left', name: 'Left' }, { id: 'Right', name: 'Right' }, { id: 'Both', name: 'Both' }]} /></Field>
             <Field label="Height"><Input value={editing.height} onChange={(v) => setEditing({ ...editing, height: v })} placeholder="180 cm" /></Field>
             <Field label="Weight"><Input value={editing.weight} onChange={(v) => setEditing({ ...editing, weight: v })} placeholder="75 kg" /></Field>
             <Field label="Photo URL"><Input value={editing.photo_url} onChange={(v) => setEditing({ ...editing, photo_url: v })} /></Field>
-            <div className="flex items-end gap-4">
+            <div className="flex items-end gap-4 flex-wrap">
               <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" checked={!!editing.is_captain} onChange={(e) => setEditing({ ...editing, is_captain: e.target.checked })} className="accent-blue-500" /> Captain</label>
               <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" checked={!!editing.is_vice_captain} onChange={(e) => setEditing({ ...editing, is_vice_captain: e.target.checked })} className="accent-blue-500" /> Vice Captain</label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" checked={!!editing.is_starting} onChange={(e) => setEditing({ ...editing, is_starting: e.target.checked })} className="accent-blue-500" /> Starting XI</label>
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" checked={!!editing.is_substitute} onChange={(e) => setEditing({ ...editing, is_substitute: e.target.checked })} className="accent-blue-500" /> Substitute</label>
             </div>
           </div>
           <div className="flex gap-2 mt-5">
