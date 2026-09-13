@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { vmixBridge } from './vmixBridge';
+import { createVmixHttp } from './vmixHttp';
 import { GRAPHIC_KEYS, AUTO_MATCH_RULES, DEFAULT_GRAPHIC_INPUTS, DEFAULT_FIELD_MAP, DEFAULT_SHORTCUTS } from './vmixDefaults';
 
 const VmixContext = createContext(null);
@@ -12,7 +12,7 @@ const STORAGE_KEY = 'vmix_controller_state_v1';
 const now = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 
 const DEFAULT_STATE = {
-  settings: { ip: '127.0.0.1', port: 8099, autoReconnect: true },
+  settings: { ip: '127.0.0.1', port: 8088, autoReconnect: true },
   operatorName: 'Operator',
   activeMatchId: null,
   offlineMatchMode: false,
@@ -40,6 +40,7 @@ export function VmixProvider({ children }) {
         return {
           ...DEFAULT_STATE,
           ...s,
+          settings: { ...DEFAULT_STATE.settings, ...(s.settings || {}), port: (s.settings && s.settings.port && s.settings.port !== 8099) ? s.settings.port : 8088 },
           graphicInputMap: { ...DEFAULT_GRAPHIC_INPUTS, ...(s.graphicInputMap || {}) },
           fieldMap: { ...DEFAULT_FIELD_MAP, ...(s.fieldMap || {}) },
           shortcuts: { ...DEFAULT_SHORTCUTS, ...(s.shortcuts || {}) },
@@ -54,6 +55,9 @@ export function VmixProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [simulated, setSimulated] = useState(false);
   const [connecting, setConnecting] = useState(false);
+
+  // Direct vMix Web API client (no bridge). Rebuilt when IP/port change.
+  const vmix = useMemo(() => createVmixHttp({ host: state.settings.ip, port: state.settings.port }), [state.settings.ip, state.settings.port]);
 
   // ISOLATED clock — lives in its own context so ticking it does not force the
   // rest of the app to re-render (§4).
@@ -106,29 +110,23 @@ export function VmixProvider({ children }) {
   const connect = useCallback(async () => {
     setConnecting(true);
     try {
-      const res = await vmixBridge.ping();
-      if (res?.ok) {
-        if (res.reachable === false) {
-          setConnected(false); setSimulated(false); setConnecting(false);
-          setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null }));
-          addLog('Bridge running but vMix not responding — check vMix is open and IP/port are correct', 'warning');
-          return;
-        }
+      const res = await vmix.ping();
+      if (res?.ok && res.reachable) {
         setConnected(true); setSimulated(false); setConnecting(false);
-        const inputs = Array.isArray(res.inputs) ? res.inputs : [];
-        const titles = inputs.map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
+        const titles = (res.inputs || []).map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
         setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null, vmixInputs: titles.length ? titles : s.vmixInputs }));
-        const mapped = autoMapInputs(inputs);
-        addLog(`Connected to vMix (REAL) — ${titles.length} title(s) detected${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
+        const mapped = autoMapInputs(res.inputs || []);
+        addLog(`Connected to vMix (REAL) via Web API — ${titles.length} title(s) detected${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}${titles.length ? '' : ' · map inputs manually on the vMix page'}`, 'success');
         return;
       }
-    } catch (e) {}
-    setTimeout(() => {
       setConnected(false); setSimulated(true); setConnecting(false);
       setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: null, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
-      addLog('vMix bridge not running — SIMULATION mode (run desktop/vmix-bridge.js for real control)', 'warning');
-    }, 400);
-  }, [addLog, autoMapInputs]);
+      addLog(`Cannot reach vMix Web API at ${state.settings.ip}:${state.settings.port} — ${res?.error || 'no response'}. SIMULATION mode. Enable vMix Web Controller (vMix Settings → Web Controller, default port 8088) and check IP/port. The published HTTPS site cannot reach a local HTTP vMix (browser blocks it) — run the app locally or as the desktop app.`, 'warning');
+    } catch (e) {
+      setConnected(false); setSimulated(false); setConnecting(false);
+      addLog('vMix connection error — ' + (e?.message || 'unknown'), 'warning');
+    }
+  }, [vmix, addLog, autoMapInputs, state.settings.ip, state.settings.port]);
 
   const disconnect = useCallback(() => {
     setConnected(false);
@@ -141,47 +139,45 @@ export function VmixProvider({ children }) {
     setConnecting(true);
     const t0 = now();
     try {
-      const res = await vmixBridge.ping();
-      if (res?.ok && res.reachable !== false) {
-        const ms = Math.round(now() - t0);
+      const res = await vmix.ping();
+      const ms = Math.round(now() - t0);
+      if (res?.ok && res.reachable) {
         setConnecting(false);
         setConnected(true); setSimulated(false);
         setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: ms }));
-        addLog(`vMix test OK — REAL (${ms}ms)`, 'success');
+        addLog(`vMix test OK — REAL Web API (${ms}ms)`, 'success');
         return { ok: true, ms, mode: 'real' };
       }
-    } catch (e) {}
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const ok = Math.random() > 0.15;
-        const ms = Math.round(20 + Math.random() * 80);
-        setConnecting(false); setSimulated(true);
-        setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: ms }));
-        if (ok) { addLog(`vMix test — SIMULATION (${ms}ms)`, 'warning'); resolve({ ok: true, ms, mode: 'sim' }); }
-        else { addLog('vMix test failed — bridge unreachable', 'warning'); resolve({ ok: false, ms: null, mode: 'offline' }); }
-      }, 500);
-    });
-  }, [addLog]);
+      setConnecting(false); setSimulated(true);
+      setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: null }));
+      addLog(`vMix test — unreachable at ${state.settings.port === 8088 ? `${state.settings.ip}:8088` : `${state.settings.ip}:${state.settings.port}`} (${res?.error || 'no response'})`, 'warning');
+      return { ok: false, ms: null, mode: 'offline' };
+    } catch (e) {
+      setConnecting(false);
+      addLog('vMix test error — ' + (e?.message || 'unknown'), 'warning');
+      return { ok: false, ms: null, mode: 'offline' };
+    }
+  }, [vmix, addLog, state.settings.ip, state.settings.port]);
 
   const refreshInputs = useCallback(async () => {
     try {
-      const res = await vmixBridge.ping();
-      if (res?.ok && res.reachable !== false) {
-        const inputs = Array.isArray(res.inputs) ? res.inputs : [];
-        const titles = inputs.map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
+      const res = await vmix.ping();
+      if (res?.ok && res.reachable) {
+        const titles = (res.inputs || []).map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
         if (titles.length) {
           setState((s) => ({ ...s, vmixInputs: titles }));
-          const mapped = autoMapInputs(inputs);
+          const mapped = autoMapInputs(res.inputs || []);
           addLog(`vMix inputs refreshed (REAL, ${titles.length})${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
         } else {
-          addLog('vMix connected but no inputs found in project', 'warning');
+          setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
+          addLog('vMix reachable but titles not readable (browser CORS limits Web API reads) — map inputs manually on the vMix page', 'warning');
         }
         return;
       }
     } catch (e) {}
     setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
-    addLog('vMix inputs refreshed (SIMULATION)', 'info');
-  }, [addLog, autoMapInputs]);
+    addLog('vMix unreachable — inputs not refreshed', 'warning');
+  }, [vmix, addLog, autoMapInputs]);
 
   const updateSettings = useCallback((settings) => {
     setState((s) => ({ ...s, settings: { ...s.settings, ...settings } }));
@@ -236,39 +232,39 @@ export function VmixProvider({ children }) {
     enqueue(() => {
       entries.forEach(([key, value]) => {
         const field = fm[key] || key;
-        vmixBridge.setText(input, field, value == null ? '' : String(value));
+        vmix.setText(input, field, value == null ? '' : String(value));
       });
     });
     setState((s) => ({ ...s, lastCommand: { graphic, input, fields: entries.length, time: new Date().toISOString(), result: real ? 'sent' : 'simulated', command: 'SetText' } }));
     addLog(`SetText → ${graphic} (input "${input}"): ${entries.length} fields ${real ? '' : '· simulated'}`, 'graphic');
     return { ok: true, simulated: !real };
-  }, [state.graphicInputMap, state.fieldMap, addLog, connected, enqueue]);
+  }, [state.graphicInputMap, state.fieldMap, addLog, connected, enqueue, vmix]);
 
   const takeGraphic = useCallback((graphic, layer = 1) => {
     const input = state.graphicInputMap[graphic];
     if (!input) { addLog(`Cannot take "${graphic}" — no input mapped`, 'warning'); return; }
     const real = connected;
-    enqueue(() => { vmixBridge.overlayIn(input, layer); });
+    enqueue(() => { vmix.overlayIn(input, layer); });
     setState((s) => ({ ...s, lastCommand: { graphic, input, time: new Date().toISOString(), result: real ? 'sent' : 'simulated', command: 'OverlayIn' } }));
     addLog(`OverlayIn → ${graphic} (input "${input}")`, 'graphic');
-  }, [state.graphicInputMap, addLog, connected, enqueue]);
+  }, [state.graphicInputMap, addLog, connected, enqueue, vmix]);
 
   const outGraphic = useCallback((graphic, layer = 1) => {
     const input = state.graphicInputMap[graphic];
     if (!input) { addLog(`Cannot out "${graphic}" — no input mapped`, 'warning'); return; }
     const real = connected;
-    enqueue(() => { vmixBridge.overlayOut(input, layer); });
+    enqueue(() => { vmix.overlayOut(input, layer); });
     setState((s) => ({ ...s, lastCommand: { graphic, input, time: new Date().toISOString(), result: real ? 'sent' : 'simulated', command: 'OverlayOut' } }));
     addLog(`OverlayOut → ${graphic} (input "${input}")`, 'graphic');
-  }, [state.graphicInputMap, addLog, connected, enqueue]);
+  }, [state.graphicInputMap, addLog, connected, enqueue, vmix]);
 
   const clearAllGraphics = useCallback(() => {
     const inputs = Object.values(state.graphicInputMap || {}).filter(Boolean);
     const real = connected;
-    enqueue(() => { inputs.forEach((input) => vmixBridge.overlayOut(input, 1)); });
+    enqueue(() => { inputs.forEach((input) => vmix.overlayOut(input, 1)); });
     setState((s) => ({ ...s, lastCommand: { graphic: 'ALL', time: new Date().toISOString(), result: real ? 'sent' : 'simulated', command: 'OverlayOut (all)' } }));
     addLog('Cleared all graphics (OverlayOut all inputs)', 'warning');
-  }, [state.graphicInputMap, addLog, connected, enqueue]);
+  }, [state.graphicInputMap, addLog, connected, enqueue, vmix]);
 
   // value is MEMOIZED away from the clock — a clock tick never changes its
   // identity, so useVmix() consumers do not re-render every second.
@@ -291,7 +287,7 @@ export function VmixProvider({ children }) {
       lastConnection: state.lastConnection, responseTime: state.responseTime,
       test,
       vmixInputs: state.vmixInputs, refreshInputs,
-      vmix: vmixBridge,
+      vmix,
       graphicInputMap: state.graphicInputMap, fieldMap: state.fieldMap, shortcuts: state.shortcuts,
       lastCommand: state.lastCommand,
       setGraphicInput, setField, setShortcut,

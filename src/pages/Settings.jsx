@@ -91,8 +91,8 @@ export default function Settings() {
               className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1.5">TCP Port</label>
-            <input type="number" value={form.port} onChange={(e) => setForm({ ...form, port: Number(e.target.value) })}
+            <label className="block text-xs text-slate-400 mb-1.5">Web API Port (8088)</label>
+            <input type="number" value={form.port} onChange={(e) => setForm({ ...form, port: Number(e.target.value) })} placeholder="8088"
               className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500" />
           </div>
           <div className="flex items-end">
@@ -134,7 +134,7 @@ export default function Settings() {
             </div>
           </div>
         )}
-        <p className="text-xs text-slate-600 mt-3">vMix talks over your local LAN to {form.ip}:{form.port}. Internet is <span className="text-slate-400">not</span> required for this connection.</p>
+        <p className="text-xs text-slate-600 mt-3">Connects directly to vMix's Web API at <span className="text-slate-400">{form.ip}:{form.port}</span> — enable <span className="text-slate-400">vMix → Settings → Web Controller</span> (default port 8088). No bridge, no internet required. From the published HTTPS site the browser blocks local HTTP — run locally or as the desktop app for live control.</p>
       </div>
 
       {/* Offline Match Mode */}
@@ -228,7 +228,7 @@ export default function Settings() {
       <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-6">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Sliders size={16} className="text-blue-400" /> Configuration Files (vmix.json / graphics.json)</h3>
         <div className="flex flex-wrap gap-2">
-          <button onClick={() => downloadJSON('vmix.json', { vMix: { ip: form.ip, port: form.port, autoReconnect: form.autoReconnect, bridgePort: 8585 }, activeMatchId, offlineMatchMode })} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export vmix.json</button>
+          <button onClick={() => downloadJSON('vmix.json', { vMix: { ip: form.ip, port: form.port, autoReconnect: form.autoReconnect }, activeMatchId, offlineMatchMode })} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export vmix.json</button>
           <button onClick={() => downloadJSON('graphics.json', { inputs: vmixInputs, shortcuts: { F1: 'Score Bug', F2: 'Lower Third', F3: 'Goal', F4: 'Substitution', F5: 'Yellow Card', F6: 'Red Card', F7: 'VAR Review', F8: 'Statistics', F9: 'Starting XI', F10: 'Full Screen' }, fieldMapping: {} })} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Download size={16} /> Export graphics.json</button>
         </div>
       </div>

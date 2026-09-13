@@ -27,7 +27,7 @@ export default function Vmix() {
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2"><Wifi size={16} className="text-blue-400" /> Connection</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
           <div><label className={labelCls}>vMix IP Address</label><input value={settings.ip} onChange={(e) => updateSettings({ ip: e.target.value })} className={inputCls + ' w-full'} /></div>
-          <div><label className={labelCls}>TCP Port</label><input type="number" value={settings.port} onChange={(e) => updateSettings({ port: Number(e.target.value) })} className={inputCls + ' w-full'} /></div>
+          <div><label className={labelCls}>Web API Port (8088)</label><input type="number" value={settings.port} onChange={(e) => updateSettings({ port: Number(e.target.value) })} className={inputCls + ' w-full'} /></div>
           <div className="flex items-center gap-2">
             {!connected ? <button onClick={connect} disabled={connecting} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium disabled:opacity-50"><Plug size={15} /> {connecting ? 'Connecting…' : 'Connect'}</button>
               : <button onClick={disconnect} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600/80 hover:bg-red-500 text-white text-sm font-medium"><PlugZap size={15} /> Disconnect</button>}
@@ -41,7 +41,7 @@ export default function Vmix() {
           <span className="text-slate-500">Available inputs ({vmixInputs.length}): {vmixInputs.join(', ') || '— none —'}</span>
           <span className={`px-3 py-1.5 rounded-lg border ${online ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>INTERNET {online ? 'ONLINE' : 'OFFLINE'}</span>
         </div>
-        <p className="text-[11px] text-slate-500 mt-3">Live control uses the local LAN bridge (run <code className="text-blue-300">desktop/vmix-bridge.js</code> for real TCP). Without the bridge, commands are simulated but still logged.</p>
+        <p className="text-[11px] text-slate-500 mt-3">Live control talks straight to vMix's Web API at <code className="text-blue-300">{settings.ip}:{settings.port}</code> — enable <code className="text-blue-300">vMix → Settings → Web Controller</code>. If unreachable, commands are simulated but still logged. From the published HTTPS site the browser blocks local HTTP, so run the app locally or as the desktop app for live control.</p>
       </div>
 
       {/* Input mapping */}
