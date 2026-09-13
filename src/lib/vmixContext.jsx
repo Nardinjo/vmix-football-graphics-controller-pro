@@ -177,15 +177,14 @@ export function VmixProvider({ children }) {
           setState((s) => ({ ...s, vmixInputs: titles }));
           const mapped = autoMapInputs(res.inputs || []);
           addLog(`vMix inputs refreshed (REAL, ${titles.length})${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
-        } else {
-          setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
-          addLog('vMix reachable but titles not readable (browser CORS limits Web API reads) — map inputs manually on the vMix page', 'warning');
+          return { titles, reachable: true, readable: true };
         }
-        return;
+        addLog('vMix reachable but titles not readable (browser CORS blocks Web API reads) — paste titles via the loader', 'warning');
+        return { titles: [], reachable: true, readable: false };
       }
     } catch (e) {}
-    setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
-    addLog('vMix unreachable — inputs not refreshed', 'warning');
+    addLog('vMix unreachable — enable vMix Web Controller and check IP/port', 'warning');
+    return { titles: [], reachable: false, readable: false };
   }, [vmix, addLog, autoMapInputs]);
 
   const updateSettings = useCallback((settings) => {

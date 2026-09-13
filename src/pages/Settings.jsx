@@ -4,16 +4,18 @@ import { useNetworkStatus } from '@/lib/useNetworkStatus';
 import { entities as localEntities, createBackup, listBackups, restoreBackup, deleteBackup, syncFromCloud, pushToCloud, exportDatabase, importDatabase } from '@/lib/dataLayer';
 import { downloadJSON, downloadCSV } from '@/lib/localFile';
 import { versionString, validateUpdateManifest } from '@/lib/appVersion';
+import VmixInputsLoader from '@/components/VmixInputsLoader';
 import { Sliders, Wifi, WifiOff, User, Save, RefreshCw, Check, X, Cloud, Download, Upload, Database, HardDrive, RotateCcw, Trash2, CloudDownload, CloudUpload, Activity } from 'lucide-react';
 
 export default function Settings() {
-  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog, lastConnection, responseTime, test, vmixInputs, refreshInputs, offlineMatchMode, setOfflineMatchMode, activeMatchId } = useVmix();
+  const { settings, updateSettings, connected, connecting, connect, disconnect, operatorName, setOperatorName, addLog, lastConnection, responseTime, test, vmixInputs, refreshInputs, offlineMatchMode, setOfflineMatchMode, activeMatchId, applyVmixTitles } = useVmix();
   const online = useNetworkStatus();
   const [form, setForm] = useState(settings);
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [backups, setBackups] = useState([]);
   const [busy, setBusy] = useState('');
+  const [showInputs, setShowInputs] = useState(false);
 
   const loadBackups = async () => { try { setBackups(await listBackups()); } catch (e) {} };
   useEffect(() => { loadBackups(); }, []);
@@ -113,7 +115,7 @@ export default function Settings() {
         <div className="flex flex-wrap items-center gap-2 mt-5">
           <button onClick={save} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium"><Save size={16} /> Save Settings</button>
           <button onClick={runTest} disabled={testing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-50"><RefreshCw size={16} className={testing ? 'animate-spin' : ''} /> {testing ? 'Testing...' : 'Test'}</button>
-          <button onClick={refreshInputs} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Database size={16} /> Refresh Inputs</button>
+          <button onClick={() => setShowInputs(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><Database size={16} /> Refresh Inputs</button>
           {testResult && (testResult.ok
             ? <span className="flex items-center gap-1 text-sm text-green-400"><Check size={15} /> Test OK ({testResult.ms} ms)</span>
             : <span className="flex items-center gap-1 text-sm text-red-400"><X size={15} /> No response</span>)}
@@ -261,6 +263,8 @@ export default function Settings() {
           <button onClick={pushCloud} disabled={!online || busy === 'push'} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm disabled:opacity-40"><CloudUpload size={16} /> {busy === 'push' ? 'Syncing...' : 'Push to Cloud'}</button>
         </div>
       </div>
+
+      <VmixInputsLoader open={showInputs} onClose={() => setShowInputs(false)} refreshInputs={refreshInputs} applyVmixTitles={applyVmixTitles} addLog={addLog} />
     </div>
   );
 }
