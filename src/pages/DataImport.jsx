@@ -9,6 +9,7 @@ import { PageHeader } from '@/pages/Matches';
 
 const TARGETS = [
   { id: 'Player', label: 'Player Roster', icon: Users, hint: 'squad number, name, position, age, nationality, team' },
+  { id: 'Roster', label: 'Match Roster (Home/Away)', icon: Users, hint: 'Home: numbers col K + names col L · Away: numbers col M + names col N (rows 1–23)' },
   { id: 'Match', label: 'Match Schedule', icon: Trophy, hint: 'home, away, competition, venue, kickoff date/time' },
   { id: 'Team', label: 'Team Directory', icon: Database, hint: 'name, short name, country, league, colors' },
 ];
@@ -59,6 +60,27 @@ const NUMBER_FIELDS = { Player: ['number', 'age'], Match: ['attendance', 'home_s
 
 const POS_MAP = { gk: 'GK', g: 'GK', goalkeeper: 'GK', def: 'DEF', d: 'DEF', defender: 'DEF', cb: 'DEF', lb: 'DEF', rb: 'DEF', mid: 'MID', m: 'MID', midfielder: 'MID', cm: 'MID', dm: 'MID', am: 'MID', fwd: 'FWD', f: 'FWD', forward: 'FWD', striker: 'FWD', st: 'FWD', cf: 'FWD', rw: 'FWD', lw: 'FWD', wing: 'FWD' };
 const FOOT_MAP = { l: 'Left', left: 'Left', r: 'Right', right: 'Right', b: 'Both', both: 'Both', either: 'Both' };
+
+// Schema for the two-team roster sheet: Home in columns K/L, Away in M/N,
+// 23 rows each. Fed to the cloud extractor with exact column instructions.
+const ROSTER_SCHEMA = {
+  type: 'object',
+  properties: {
+    home_team: { type: 'string', description: 'The HOME team name shown near the home roster block' },
+    away_team: { type: 'string', description: 'The AWAY team name shown near the away roster block' },
+    home_players: {
+      type: 'array',
+      description: 'HOME team roster. Column K (rows 1 to 23) = shirt number, column L (rows 1 to 23) = player full name. Skip empty rows.',
+      items: { type: 'object', properties: { number: { type: 'string' }, name: { type: 'string' } } },
+    },
+    away_players: {
+      type: 'array',
+      description: 'AWAY team roster. Column M (rows 1 to 23) = shirt number, column N (rows 1 to 23) = player full name. Skip empty rows.',
+      items: { type: 'object', properties: { number: { type: 'string' }, name: { type: 'string' } } },
+    },
+  },
+  required: ['home_players', 'away_players'],
+};
 
 const normKey = (k) => String(k || '').toLowerCase().trim().replace(/[\s_\-]+/g, ' ').replace(/[().]/g, '');
 
@@ -118,6 +140,7 @@ export default function DataImport() {
   const [fileName, setFileName] = useState('');
   const [status, setStatus] = useState(null);
   const [working, setWorking] = useState(false);
+  const [rosterTeams, setRosterTeams] = useState({ home: '', away: '' });
   const teamsRef = useRef(new Map());
 
   // Load existing teams into a lookup cache for name → id resolution.
@@ -143,11 +166,40 @@ export default function DataImport() {
     return created.id;
   };
 
+  const loadRoster = async (file) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext !== 'xlsx' && ext !== 'xls') {
+      setStatus({ type: 'error', msg: 'Roster import needs an Excel (.xlsx) file laid out as Home K/L, Away M/N.' });
+      return;
+    }
+    if (!online) {
+      setStatus({ type: 'error', msg: 'Roster Excel parsing needs the online extractor. Go online, or save the sheet as a clean CSV (number,name columns).' });
+      return;
+    }
+    const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+    const res = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url, json_schema: ROSTER_SCHEMA });
+    const out = res?.output || {};
+    const home = Array.isArray(out.home_players) ? out.home_players : [];
+    const away = Array.isArray(out.away_players) ? out.away_players : [];
+    const homeTeam = out.home_team || '';
+    const awayTeam = out.away_team || '';
+    setRosterTeams({ home: homeTeam, away: awayTeam });
+    const rows = [
+      ...home.map((p) => ({ number: p?.number ?? '', full_name: p?.name || '', team: homeTeam, side: 'home' })),
+      ...away.map((p) => ({ number: p?.number ?? '', full_name: p?.name || '', team: awayTeam, side: 'away' })),
+    ].filter((r) => r.full_name || r.number !== '');
+    setRawCount(home.length + away.length);
+    setMapped(rows);
+    if (!rows.length) setStatus({ type: 'error', msg: 'No players found in K/L (home) or M/N (away). Check the sheet layout.' });
+    else setStatus({ type: 'info', msg: `Detected ${home.length} home + ${away.length} away players${homeTeam || awayTeam ? ` · ${homeTeam || 'Home'} vs ${awayTeam || 'Away'}` : ''}. Confirm team names below, then Import.` });
+  };
+
   const onFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setWorking(true); setFileName(file.name); setStatus(null); setMapped(null);
     try {
+      if (target === 'Roster') { await loadRoster(file); setWorking(false); return; }
       const ext = file.name.split('.').pop().toLowerCase();
       const text = await file.text();
       let list = [];
@@ -193,6 +245,18 @@ export default function DataImport() {
       let finalRows = mapped;
       if (target === 'Team') {
         finalRows = mapped;
+      } else if (target === 'Roster') {
+        finalRows = [];
+        const homeId = await resolveOrCreateTeam(rosterTeams.home || 'Home');
+        const awayId = await resolveOrCreateTeam(rosterTeams.away || 'Away');
+        for (const r of mapped) {
+          finalRows.push({
+            number: r.number !== '' && r.number != null ? Number(r.number) : undefined,
+            full_name: r.full_name,
+            short_name: r.full_name ? String(r.full_name).split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 4) : '',
+            team_id: r.side === 'home' ? homeId : awayId,
+          });
+        }
       } else if (target === 'Player') {
         finalRows = [];
         for (const r of mapped) {
@@ -209,10 +273,11 @@ export default function DataImport() {
           finalRows.push({ ...rest, home_team_id, away_team_id, status: r.status || 'scheduled', home_score: 0, away_score: 0, current_half: 1, current_minute: 0, is_active: false });
         }
       }
-      const created = await localEntities[target].bulkCreate(finalRows);
+      const entity = target === 'Roster' ? 'Player' : target;
+      const created = await localEntities[entity].bulkCreate(finalRows);
       const teamsMade = teamsRef.current.size;
-      setStatus({ type: 'success', msg: `Imported ${created.length} ${target} records${target !== 'Team' ? ` · teams resolved/created locally` : ''}.` });
-      addLog(`Smart import: ${created.length} ${target} records`, 'success');
+      setStatus({ type: 'success', msg: `Imported ${created.length} ${entity} records${target !== 'Team' ? ` · teams resolved/created locally` : ''}.` });
+      addLog(`Smart import: ${created.length} ${entity} records`, 'success');
       setMapped(null); setFileName(''); setRawCount(0);
     } catch (err) {
       setStatus({ type: 'error', msg: 'Import failed: ' + (err.message || 'unknown error') });
@@ -220,10 +285,11 @@ export default function DataImport() {
     setWorking(false);
   };
 
-  const reset = () => { setMapped(null); setFileName(''); setStatus(null); setRawCount(0); };
+  const reset = () => { setMapped(null); setFileName(''); setStatus(null); setRawCount(0); setRosterTeams({ home: '', away: '' }); };
 
   const expectedCols = {
     Player: 'Squad Number / No, Full Name / Player, Position, Age, Nationality, Team',
+    Roster: 'Home: col K (numbers) + col L (names) · Away: col M (numbers) + col N (names) — rows 1–23. Team names auto-detected, editable above.',
     Match: 'Home, Away, Competition, Venue, Kickoff (Date/Time), Referee',
     Team: 'Name, Short Name, Country, League, Primary Color, Coach',
   };
@@ -274,9 +340,22 @@ export default function DataImport() {
           <input type="file" accept=".csv,.xlsx,.xls,.json,.xml" onChange={onFile} className="hidden" disabled={working} />
         </label>
 
+        {target === 'Roster' && mapped?.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">Home team name</label>
+              <input value={rosterTeams.home} onChange={(e) => setRosterTeams((p) => ({ ...p, home: e.target.value }))} placeholder="Home team" className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">Away team name</label>
+              <input value={rosterTeams.away} onChange={(e) => setRosterTeams((p) => ({ ...p, away: e.target.value }))} placeholder="Away team" className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-sm text-white outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 mt-4">
           <button onClick={runImport} disabled={working || !mapped?.length} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium disabled:opacity-50">
-            <Database size={16} /> {working ? 'Working…' : `Import ${mapped?.length || 0} ${target === 'Player' ? 'players' : target === 'Match' ? 'matches' : 'teams'}`}
+            <Database size={16} /> {working ? 'Working…' : `Import ${mapped?.length || 0} ${target === 'Player' || target === 'Roster' ? 'players' : target === 'Match' ? 'matches' : 'teams'}`}
           </button>
           <button onClick={reset} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm"><RotateCw size={15} /> Reset</button>
         </div>
