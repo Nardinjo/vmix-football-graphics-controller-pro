@@ -50,6 +50,24 @@ export const DEFAULT_SHORTCUTS = {
   F10: 'clear',
 };
 
+// Keyword rules used to auto-match vMix titles already in the project to our
+// graphics on connect. Only fills BLANK mappings — an operator's manual choice
+// is never overwritten. Matching is case-insensitive against the input title.
+export const AUTO_MATCH_RULES = {
+  'Score Bug': [/score\s*bug/i, /\bscorebug\b/i, /\bscore\b/i],
+  'Player Lower Third': [/lower\s*third/i, /player\s*lower/i, /\blower3\b/i],
+  'Coach': [/\bcoach\b/i],
+  'Goal': [/\bgoal\b/i],
+  'Yellow Card': [/yellow\s*card/i, /\byellow\b/i],
+  'Red Card': [/red\s*card/i],
+  'Substitution': [/substitution/i, /\bsub\b/i],
+  'Lineup': [/line\s*up/i, /starting\s*xi/i, /\blineup\b/i],
+  'Statistics': [/stat(istics)?\b/i, /\bstats?\b/i],
+  'Man of the Match': [/man\s*of\s*the\s*match/i, /\bmotm\b/i],
+  'Sponsor': [/sponsor/i],
+  'VAR': [/\bvar\b/i],
+};
+
 export const SHORTCUT_ACTIONS = [
   { id: 'goal', label: 'Goal' },
   { id: 'yellow', label: 'Yellow Card' },

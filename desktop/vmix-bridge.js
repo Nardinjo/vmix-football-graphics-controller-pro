@@ -44,6 +44,27 @@ function buildFunction(p) {
   return `FUNCTION ${p.function}${params.length ? ' ' + params.join(' ') : ''}`;
 }
 
+// Parse <input .../> entries from vMix's XML response into a list of
+// { number, title, type, key } so the app can detect titles already in the
+// project and auto-map them to graphics on connect.
+function parseInputs(xml) {
+  const list = [];
+  if (!xml || typeof xml !== 'string') return list;
+  const re = /<input\b([^>]*?)>/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) {
+    const attrs = m[1] || '';
+    const get = (k) => {
+      const mm = new RegExp('\\b' + k + '\\s*=\\s*"([^"]*)"', 'i').exec(attrs);
+      return mm ? mm[1] : '';
+    };
+    const title = get('title');
+    if (!title) continue;
+    list.push({ number: get('number'), title, type: get('type'), key: get('key') });
+  }
+  return list;
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -58,14 +79,16 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.url === '/ping') {
       const t0 = Date.now();
-      let reachable = true;
-      try { await vmixSend('FUNCTION Ping'); } catch (e) { reachable = false; }
+      let xml = '';
+      let reachable = false;
+      try { xml = await vmixSend('XML', 4000); reachable = !!(xml && xml.trim()); } catch (e) { reachable = false; }
       const ms = Date.now() - t0;
+      const inputs = reachable ? parseInputs(xml) : [];
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({
         ok: true, ms, reachable,
         host: VMIX_HOST, port: VMIX_PORT,
-        inputs: ['Score Bug', 'Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'],
+        inputs,
       }));
     }
     if (req.url === '/command') {

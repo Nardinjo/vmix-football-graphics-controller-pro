@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { vmixBridge } from './vmixBridge';
-import { DEFAULT_GRAPHIC_INPUTS, DEFAULT_FIELD_MAP, DEFAULT_SHORTCUTS } from './vmixDefaults';
+import { GRAPHIC_KEYS, AUTO_MATCH_RULES, DEFAULT_GRAPHIC_INPUTS, DEFAULT_FIELD_MAP, DEFAULT_SHORTCUTS } from './vmixDefaults';
 
 const VmixContext = createContext(null);
 // ISOLATED system clock — only the header/topbar subscribes to this, so the
@@ -77,15 +77,49 @@ export function VmixProvider({ children }) {
     }));
   }, []);
 
+  // Latest graphic->input map in a ref so autoMap can read it without forcing
+  // connect/refresh callbacks to depend on (and re-create for) every mapping edit.
+  const graphicInputMapRef = useRef(state.graphicInputMap);
+  useEffect(() => { graphicInputMapRef.current = state.graphicInputMap; }, [state.graphicInputMap]);
+
+  // Match vMix titles already in the project to our graphics by name, filling
+  // only blanks (never overwriting an operator's manual mapping). Returns how
+  // many new mappings were applied.
+  const autoMapInputs = useCallback((inputList) => {
+    const titles = Array.isArray(inputList)
+      ? inputList.map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean)
+      : [];
+    if (!titles.length) return 0;
+    const filled = {};
+    let count = 0;
+    GRAPHIC_KEYS.forEach((g) => {
+      if (graphicInputMapRef.current[g]) return;
+      const rules = AUTO_MATCH_RULES[g] || [];
+      const hit = titles.find((t) => rules.some((r) => r.test(t)));
+      if (hit) { filled[g] = hit; count++; }
+    });
+    if (count) setState((s) => ({ ...s, graphicInputMap: { ...s.graphicInputMap, ...filled } }));
+    return count;
+  }, []);
+
   // REAL connection = the local Node bridge answered. Otherwise SIMULATION.
   const connect = useCallback(async () => {
     setConnecting(true);
     try {
       const res = await vmixBridge.ping();
       if (res?.ok) {
+        if (res.reachable === false) {
+          setConnected(false); setSimulated(false); setConnecting(false);
+          setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null }));
+          addLog('Bridge running but vMix not responding — check vMix is open and IP/port are correct', 'warning');
+          return;
+        }
         setConnected(true); setSimulated(false); setConnecting(false);
-        setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null, vmixInputs: res.inputs?.length ? res.inputs : s.vmixInputs }));
-        addLog('Connected to vMix (REAL) via local bridge', 'success');
+        const inputs = Array.isArray(res.inputs) ? res.inputs : [];
+        const titles = inputs.map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
+        setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: res.ms ?? null, vmixInputs: titles.length ? titles : s.vmixInputs }));
+        const mapped = autoMapInputs(inputs);
+        addLog(`Connected to vMix (REAL) — ${titles.length} title(s) detected${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
         return;
       }
     } catch (e) {}
@@ -94,7 +128,7 @@ export function VmixProvider({ children }) {
       setState((s) => ({ ...s, lastConnection: new Date().toISOString(), responseTime: null, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
       addLog('vMix bridge not running — SIMULATION mode (run desktop/vmix-bridge.js for real control)', 'warning');
     }, 400);
-  }, [addLog]);
+  }, [addLog, autoMapInputs]);
 
   const disconnect = useCallback(() => {
     setConnected(false);
@@ -108,7 +142,7 @@ export function VmixProvider({ children }) {
     const t0 = now();
     try {
       const res = await vmixBridge.ping();
-      if (res?.ok) {
+      if (res?.ok && res.reachable !== false) {
         const ms = Math.round(now() - t0);
         setConnecting(false);
         setConnected(true); setSimulated(false);
@@ -132,15 +166,22 @@ export function VmixProvider({ children }) {
   const refreshInputs = useCallback(async () => {
     try {
       const res = await vmixBridge.ping();
-      if (res?.ok && res.inputs?.length) {
-        setState((s) => ({ ...s, vmixInputs: res.inputs }));
-        addLog(`vMix inputs refreshed (REAL, ${res.inputs.length})`, 'success');
+      if (res?.ok && res.reachable !== false) {
+        const inputs = Array.isArray(res.inputs) ? res.inputs : [];
+        const titles = inputs.map((i) => (typeof i === 'string' ? i : i?.title)).filter(Boolean);
+        if (titles.length) {
+          setState((s) => ({ ...s, vmixInputs: titles }));
+          const mapped = autoMapInputs(inputs);
+          addLog(`vMix inputs refreshed (REAL, ${titles.length})${mapped ? `, ${mapped} graphic(s) auto-mapped` : ''}`, 'success');
+        } else {
+          addLog('vMix connected but no inputs found in project', 'warning');
+        }
         return;
       }
     } catch (e) {}
     setState((s) => ({ ...s, vmixInputs: ['Score Bug', 'Player Lower Third', 'Goal', 'Substitution', 'Starting XI', 'Full Screen'] }));
     addLog('vMix inputs refreshed (SIMULATION)', 'info');
-  }, [addLog]);
+  }, [addLog, autoMapInputs]);
 
   const updateSettings = useCallback((settings) => {
     setState((s) => ({ ...s, settings: { ...s.settings, ...settings } }));
